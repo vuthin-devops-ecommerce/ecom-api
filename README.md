@@ -1,0 +1,98 @@
+# DevOps-Journey
+
+ដំណើររៀន DevOps ជាជំហាន — monorepo មាន **ឯកសារ** (`docs/`) និង **app** (`mini-shop/`, Spring Boot)។
+App ជា modular monolith (`catalog` + `order`) ដែលរៀបចំឱ្យបំបែកជា service ដាច់នៅ Phase B។
+
+| Phase | ខ្លឹមសារ | ស្ថានភាព |
+|---|---|---|
+| A | modular monolith, Flyway, Testcontainers, Docker Compose | ✅ (`docs/phase-a-plan.md`) |
+| A2 | GitHub Actions CI, Trivy, ghcr.io | ⬜ |
+| A3 | Kubernetes (kind), probes, rolling update, HPA | ⬜ |
+| A4 | Terraform | ⬜ |
+
+## រចនាសម្ព័ន្ធ
+
+```
+docs/
+  00-tech-stack.md        source of truth សម្រាប់ version tool
+  phase-*-plan.md         ផែនការ + progress tracker នីមួយៗ
+  decisions/              ADR (001 modular monolith, 002 order schema FK, 003 productId)
+  learning-log.md         ចម្លើយសំណួរឆ្លុះបញ្ចាំង
+mini-shop/                Spring Boot 4.1 · Java 21 · Maven wrapper · PostgreSQL 17 · Flyway
+```
+
+## តម្រូវការ
+
+- Java **21** (Eclipse Temurin) — `java -version`
+- Docker Engine + Compose v2 — `docker compose version`
+- Git
+
+Maven មិនចាំបាច់តម្លើង — ប្រើ `./mvnw` (wrapper, Maven 3.9.16)។
+
+## Run ក្នុងមូលដ្ឋាន (app លើ laptop, DB ក្នុង container)
+
+```bash
+docker run -d --name minishop-db \
+  -e POSTGRES_DB=minishop -e POSTGRES_USER=minishop -e POSTGRES_PASSWORD=minishop \
+  -p 5432:5432 postgres:17
+
+cd mini-shop
+export JAVA_HOME=/path/to/jdk-21            # បើ default មិនមែន 21
+export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/minishop
+export SPRING_DATASOURCE_USERNAME=minishop
+export SPRING_DATASOURCE_PASSWORD=minishop  # គ្មាន default — app fail fast បើភ្លេច
+export SPRING_PROFILES_ACTIVE=dev            # optional: seed 8 products (db/dev/R__seed_dev_data.sql)
+./mvnw spring-boot:run
+```
+
+ឬដាក់ `export` ទាំងនោះក្នុង `mini-shop/env.sh` (gitignored) រួច `source env.sh`។
+
+## Run ជាមួយ Docker Compose (app + DB)
+
+```bash
+cd mini-shop
+cp .env.example .env            # កែ DB_PASSWORD / APP_PORT តាមចិត្ត
+docker compose up --build       # build image (multi-stage, non-root) + postgres:17
+docker compose down             # បញ្ឈប់ (រក្សា data)  ·  down -v = លុប data
+```
+
+## ផ្ទៀងផ្ទាត់
+
+```bash
+curl localhost:8080/actuator/health          # {"status":"UP"}
+open http://localhost:8080/swagger-ui.html   # Swagger UI
+```
+
+## API
+
+```bash
+B=localhost:8080/api; H='Content-Type: application/json'
+
+curl -H "$H" -d '{"sku":"SKU-100","name":"Widget","price":9.99,"stock":5}' $B/products   # 201 · 409 បើ SKU ស្ទួន
+curl $B/products                                                                         # 200 list
+curl $B/products/1                                                                       # 200 · 404
+curl -X PATCH -H "$H" -d '{"delta":-2}' $B/products/1/stock                              # 200 · 400 បើ stock មិនគ្រប់
+
+curl -H "$H" -d '{"items":[{"productId":1,"quantity":2},{"productId":2,"quantity":1}]}' $B/orders
+#   201 · 400 stock មិនគ្រប់ (មិនកាត់ stock ណាមួយ) · 400 productId ស្ទួន · 404 product មិនមាន
+curl $B/orders/1                                                                         # 200 · 404
+```
+
+Error ឆ្លើយជា [RFC 9457 ProblemDetail](https://www.rfc-editor.org/rfc/rfc9457): `{status, title, detail, instance}`
+(+ `errors` សម្រាប់ validation)។
+
+## Tests
+
+```bash
+cd mini-shop
+./mvnw test                  # unit (Mockito)
+./mvnw verify                # + integration (*IT, Testcontainers postgres:17 — ត្រូវការ Docker)
+./mvnw verify -DskipITs      # unit ប៉ុណ្ណោះ
+```
+
+## ច្បាប់សំខាន់ (ពី `CLAUDE.md`)
+
+- Pin version គ្រប់ទីកន្លែង — គ្មាន `latest`
+- គ្មាន secret ក្នុង git — `env.sh`, `.env` gitignored; commit `.env.example`
+- Flyway គ្រប់គ្រង schema (`ddl-auto: validate`); migration ដែល apply រួច**មិនកែ** — បន្ថែម `V<n+1>`
+- `catalog` ↔ `order` ឆ្លងកាត់ Service ប៉ុណ្ណោះ (ADR-003)
