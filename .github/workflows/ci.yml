@@ -1,57 +1,120 @@
-# Phase A2 Task 1 — build + unit test on every push.
-# Design notes live in docs/phase-a2-plan.md; reflection answers in docs/learning-log.md.
-name: CI
+# =====================================================================================
+# Phase A2 Task 1 — CI workflow: build + unit test រាល់ push
+#
+# របៀបអាន file នេះ: បន្ទាត់នីមួយៗមាន ៣ ផ្នែក
+#   ► អ្វី       — បន្ទាត់នេះធ្វើអ្វី
+#   ► សេណារីយ៉ូ  — កើតអ្វី "បើមាន" / "បើគ្មាន" បន្ទាត់នេះ (ស្រមៃមើលពិត)
+#   ► សំណួរ      — សំណួរ review, ឆ្លើយក្នុង docs/learning-log.md (Phase A2 / Task 1)
+#
+# គំនិតធំ: CI ជា feedback loop — រាល់ step សួរថា "បើ step នេះបរាជ័យ ខ្ញុំដឹងអ្វី? ក្នុងពេលប៉ុន្មាន?"
+# =====================================================================================
 
+name: CI   # ឈ្មោះដែលបង្ហាញក្នុង Actions tab និង badge (Task 5) — ប្តូរឈ្មោះ = badge URL ប្តូរ
+
+# -------------------------------------------------------------------------------------
+# on: — ព្រឹត្តិការណ៍ណាខ្លះធ្វើឱ្យ workflow run
+# -------------------------------------------------------------------------------------
 on:
   push:
-    branches: ["**"]
+    branches: ["**"]        # ► អ្វី: push ទៅ branch ណាក៏ run (រួមទាំង feature branch)
+                            # ► សេណារីយ៉ូ: អ្នក push branch "fix-stock" → CI run ភ្លាម → ដឹងថាខូចមុនបើក PR
+                            #   បើសរសេរ [main] ប៉ុណ្ណោះ → feature branch គ្មាន feedback រហូតដល់ merge (យឺតពេក)
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop]   # ► អ្វី: PR ដែលចង់ merge ចូល main ឬ develop ក៏ run ដែរ
+                                # ► សេណារីយ៉ូ: Task 5 branch protection ត្រូវការ status check ពី PR run នេះ
+                                # ► សំណួរ: push + pull_request ទាំង ២ → commit តែមួយ run ២ ដងឬ? ថ្លៃឬអត់?
 
-# A newer push on the same branch cancels the run still in progress for the older commit.
+# -------------------------------------------------------------------------------------
+# concurrency: — កុំឱ្យ run ចាស់ និង run ថ្មីលើ branch ដដែល run ព្រមគ្នា
+# -------------------------------------------------------------------------------------
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}   # ► អ្វី: ក្រុម = ឈ្មោះ workflow + branch (ឧ. "CI-refs/heads/develop")
+  cancel-in-progress: true                           # ► អ្វី: run ថ្មីមក → run ចាស់ក្នុងក្រុមដដែលត្រូវ cancel
+                                                     # ► សេណារីយ៉ូ: push ៣ ដងក្នុង ១ នាទី → run ១ និង ២ ត្រូវ cancel, តែ run ៣ (commit ចុងក្រោយ) run ចប់
+                                                     #   បើគ្មាន: ៣ run ដើរព្រមគ្នា = លុយ runner ៣ ដង ហើយលទ្ធផល run ១-២ គ្មានប្រយោជន៍ (code ចាស់)
+                                                     # ► សំណួរ: ហេតុអ្វី group ត្រូវមាន github.ref? បើដាក់តែ github.workflow កើតអ្វីពេល ២ នាក់ push ២ branch?
 
-# Least privilege: this workflow only reads the repo. Jobs that need more (e.g. packages: write
-# for ghcr.io in Task 3) must ask for it explicitly at job level.
+# -------------------------------------------------------------------------------------
+# permissions: — least privilege សម្រាប់ GITHUB_TOKEN
+# -------------------------------------------------------------------------------------
 permissions:
-  contents: read
+  contents: read    # ► អ្វី: token របស់ run នេះអាន repo បានប៉ុណ្ណោះ — សរសេរមិនបាន
+                    # ► សេណារីយ៉ូ: dependency ព្យាបាទ (malicious) ក្នុង test រត់ក្នុង CI ព្យាយាម push commit / បង្កើត release
+                    #   → បរាជ័យ ព្រោះ token គ្មានសិទ្ធិ write។ បើគ្មានបន្ទាត់នេះ default អាចជា write ទាំងអស់ (អាស្រ័យ repo setting)
+                    # ► សេណារីយ៉ូ Task 3: job docker ត្រូវការ packages: write → ប្រកាសនៅ job នោះតែម្តង មិនមែនទីនេះ
+                    # ► សំណួរ: បើមិនកំណត់ default ជាអ្វី? (មើល Settings → Actions → Workflow permissions របស់ repo)
 
-# Monorepo: the app lives in mini-shop/, not at the repo root (CLAUDE.md §1).
-# `defaults.run.working-directory` applies to `run:` steps only — NOT to `uses:` steps,
-# so paths given to actions (cache-dependency-path, upload path) are written from the repo root.
+# -------------------------------------------------------------------------------------
+# defaults: — app នៅក្នុង subfolder mini-shop/ មិនមែន root (monorepo, CLAUDE.md §1)
+# -------------------------------------------------------------------------------------
 defaults:
   run:
-    working-directory: mini-shop
+    working-directory: mini-shop   # ► អ្វី: រាល់ step "run:" ចាប់ផ្តើមនៅ mini-shop/ (ដូច cd mini-shop មុន)
+                                   # ► សេណារីយ៉ូ: បើគ្មាន → ./mvnw រកមិនឃើញ ("No such file or directory") ព្រោះ runner នៅ root repo
+                                   # ► ប្រយ័ត្ន: អនុវត្តលើ "run:" ប៉ុណ្ណោះ — step "uses:" (action) មិនស្គាល់ working-directory
+                                   #   ដូច្នេះ path ដែលផ្តល់ឱ្យ action (cache-dependency-path, upload path) ត្រូវសរសេរ mini-shop/... ពី root
+                                   # ► សំណួរ: បើ upload path សរសេរ target/surefire-reports/ (គ្មាន mini-shop/) កើតអ្វី? (hint: if-no-files-found)
 
 jobs:
   build:
-    # Pinned runner image, not ubuntu-latest — same "no latest" rule as postgres:17 (CLAUDE.md §4).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04   # ► អ្វី: VM Ubuntu 24.04 (pin version) — មិនមែន ubuntu-latest
+                            # ► សេណារីយ៉ូ: GitHub ប្តូរ ubuntu-latest → 26.04 ថ្ងៃណាមួយ → tool version ក្នុង runner ប្តូរ → build ខូចដោយអ្នកមិនបានប៉ះអ្វី
+                            #   ជាមួយ 24.04: build ខូចតែពេល "អ្នក" ប្តូរ — ដឹងមូលហេតុភ្លាម (ច្បាប់ដដែលនឹង postgres:17, CLAUDE.md §4)
+                            # ► សំណួរ: runner image មាន Docker ស្រាប់ — Task 2 ត្រូវការវាសម្រាប់អ្វី?
     steps:
-      # Actions are pinned to a commit SHA (immutable) with the version tag as a comment.
-      # A tag like @v7 can be moved by the action's maintainer; a SHA cannot.
+      # ---------------------------------------------------------------------------
+      # Action pin ជា commit SHA + comment version
+      # ► សេណារីយ៉ូ: tag "v7" អាចត្រូវ maintainer (ឬអ្នកលួច account) ផ្លាស់ទីទៅ commit ផ្សេង
+      #   → workflow អ្នក run code ខុសពីម្សិលមិញដោយអ្នកមិនដឹង។ SHA ផ្លាស់ទីមិនបាន (immutable)
+      # ► តម្លៃ: update ដោយដៃពិបាក → Dependabot (Task 5) ធ្វើជំនួស ដោយ update ទាំង SHA និង comment
+      # ► សំណួរ: បើ comment "# v7.0.1" ខុសពី SHA ពិត អ្នកណាចាប់បាន? វាគ្រោះថ្នាក់យ៉ាងណា?
+      # ---------------------------------------------------------------------------
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # ► អ្វី: clone commit ដែលធ្វើឱ្យ run នេះកើតឡើង ចូល runner (VM ទទេស្អាតរាល់ run)
+        # ► សេណារីយ៉ូ: បើគ្មាន → runner គ្មាន code → step បន្ទាប់រកមិនឃើញ pom.xml
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
-          distribution: temurin
-          java-version: "21"            # same as <java.version> in pom.xml and the Dockerfile
-          cache: maven                  # caches ~/.m2/repository; key = hash of the file below
-          cache-dependency-path: mini-shop/pom.xml
+          distribution: temurin          # ► អ្វី: Eclipse Temurin — vendor ដដែលនឹង laptop (README) និង Dockerfile (eclipse-temurin:21)
+          java-version: "21"             # ► អ្វី: ដូច <java.version>21 ក្នុង pom.xml — "Reproducible": Java ដដែលគ្រប់ទីកន្លែង
+                                         # ► សេណារីយ៉ូ: ដាក់ "17" → compile ខូច (record, pattern matching ជាដើម) ទោះ laptop ឆ្លង
+          cache: maven                   # ► អ្វី: រក្សា ~/.m2/repository រវាង run (dependency ដែល download រួច)
+                                         # ► សេណារីយ៉ូ (វាស់ពិត 2026-09-28): run ១ cache miss → build step 52s; run ២ cache hit → 17s
+                                         #   បើគ្មាន: រាល់ run download Spring Boot + Hibernate + ... ឡើងវិញ ~35s ខ្ជះខ្ជាយ
+          cache-dependency-path: mini-shop/pom.xml   # ► អ្វី: cache key = hash នៃ file នេះ
+                                                     # ► សេណារីយ៉ូ: បន្ថែម dependency ក្នុង pom.xml → hash ប្តូរ → cache miss ១ ដង → save key ថ្មី
+                                                     #   កែ src/ ប៉ុណ្ណោះ → hash ដដែល → cache hit
+                                                     # ► សំណួរ: ហេតុអ្វីមិន cache target/ (compiled class) ដែរ? វានឹងបង្កបញ្ហាអ្វី?
 
-      # ./mvnw (wrapper) — same Maven 3.9.16 as on the laptop and inside the Dockerfile.
-      # -DskipITs: failsafe skips *IT.java (needs Docker/Testcontainers) — that is Task 2.
       - name: Build & unit test
         run: ./mvnw -B verify -DskipITs
+        # ► អ្វី: ./mvnw = Maven wrapper (3.9.16 pin ក្នុង .mvn/wrapper/maven-wrapper.properties) — Maven ដដែលនឹង laptop និង Dockerfile
+        # ► សេណារីយ៉ូ: ប្រើ "mvn" ទទេ → version ណាដែល runner មាន (ប្តូរតាម image) → "run លើម៉ាស៊ីនខ្ញុំបាន" ត្រឡប់មកវិញ
+        # ► សេណារីយ៉ូ (ជួបពិត): mvnw មាន mode 100644 ក្នុង git → Linux: "Permission denied" → កែដោយ git update-index --chmod=+x
+        # ► -B (batch mode): គ្មាន progress bar/ពណ៌/សំណួរ interactive → log អានបាន, run មិនជាប់រង់ចាំ input
+        #   សំណួរ: បើគ្មាន -B log មើលទៅដូចម្តេច? (សាកលុប រួច push មើល log)
+        # ► verify -DskipITs: surefire run *Test.java (unit); failsafe រំលង *IT.java (ត្រូវការ Docker/Testcontainers → Task 2)
+        #   សំណួរ: ហេតុអ្វី "verify" មិនមែន "test"? ភាពខុសគ្នា phase ក្នុង Maven lifecycle?
+        # ► សេណារីយ៉ូ (ជួបពិត): MiniShopApplicationTests (@SpringBootTest ត្រូវការ DB) ឈ្មោះ *Tests → surefire run វា →
+        #   ធ្លាក់ក្នុង CI ព្រោះគ្មាន SPRING_DATASOURCE_* — ឆ្លងលើ laptop តែព្រោះ DB កំពុង run។ លុបចោល; OrderControllerIT គ្របដណ្តប់
 
-      # if: always() — without it this step is skipped when tests fail, which is exactly
-      # when you need the report.
       - name: Upload test report
-        if: always()
+        if: always()   # ► អ្វី: run step នេះទោះ step មុនបរាជ័យ
+                       # ► សេណារីយ៉ូ: បើគ្មាន → test ធ្លាក់ → job ឈប់ភ្លាម → report មិនដែល upload → អ្នកឃើញតែ log វែង
+                       #   មានវា → test ធ្លាក់ → report upload → download មើល file .txt ដឹងថា assertion ណាខូច (លំហាត់ ២)
+                       # ► សំណួរ: always() ខុសពី failure() និង success() យ៉ាងណា? ពេលណាគួរប្រើ failure()?
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: surefire-reports
-          path: mini-shop/target/surefire-reports/
-          if-no-files-found: warn
+          name: surefire-reports                       # ► អ្វី: ឈ្មោះ artifact ដែលឃើញក្នុង Summary page របស់ run
+          path: mini-shop/target/surefire-reports/     # ► អ្វី: path ពី root (action មិនស្គាល់ working-directory — មើលខាងលើ)
+          if-no-files-found: warn                      # ► អ្វី: folder ទទេ (ឧ. compile ខូចមុន test) → warning មិនមែន error
+                                                       # ► សេណារីយ៉ូ: compile error → គ្មាន report → បើ "error" job ក្រហម ២ កន្លែង (compile + upload) ធ្វើឱ្យច្រឡំមូលហេតុ
+                                                       # ► សំណួរ: ពេលណា "error" សមរម្យជាង? (hint: artifact ដែល step ក្រោយត្រូវការ)
+
+# =====================================================================================
+# សំណួរ review សរុប (ឆ្លើយក្នុង docs/learning-log.md)
+#   1. Workflow នេះ run លើ commit ដែលកែតែ docs/*.md ដែរ — ខ្ជះខ្ជាយ ~30s។ គួរបន្ថែម on.push.paths ឬអត់?
+#      hint: Task 5 "Require status checks" — បើ workflow មិន run, check មិន report → PR docs-only merge មិនបាន
+#   2. បើ CI បៃតង តែ app crash ពេល run ពិត — workflow នេះខ្វះអ្វី? (Task 2 ដោះស្រាយផ្នែកមួយ)
+#   3. Job តែមួយឥឡូវ។ Task 2 នឹងបំបែក unit-test / integration-test — អ្នកចង់ fail fast យ៉ាងណា?
+# =====================================================================================
