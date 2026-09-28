@@ -1,12 +1,15 @@
 # =====================================================================================
-# Phase A2 Task 1 — CI workflow: build + unit test រាល់ push
+# Phase A2 — CI workflow
+#   Task 1: build + unit test រាល់ push
+#   Task 2: integration test (Testcontainers) ក្នុង job ដាច់ — run តែពេល unit test ឆ្លង (fail fast)
 #
 # របៀបអាន file នេះ: បន្ទាត់នីមួយៗមាន ៣ ផ្នែក
 #   ► អ្វី       — បន្ទាត់នេះធ្វើអ្វី
 #   ► សេណារីយ៉ូ  — កើតអ្វី "បើមាន" / "បើគ្មាន" បន្ទាត់នេះ (ស្រមៃមើលពិត)
-#   ► សំណួរ      — សំណួរ review, ឆ្លើយក្នុង docs/learning-log.md (Phase A2 / Task 1)
+#   ► សំណួរ      — សំណួរ review, ឆ្លើយក្នុង docs/learning-log.md (Phase A2)
 #
 # គំនិតធំ: CI ជា feedback loop — រាល់ step សួរថា "បើ step នេះបរាជ័យ ខ្ញុំដឹងអ្វី? ក្នុងពេលប៉ុន្មាន?"
+# ការសម្រេចចិត្តបំបែក job: docs/decisions/004-ci-job-structure.md
 # =====================================================================================
 
 name: CI   # ឈ្មោះដែលបង្ហាញក្នុង Actions tab និង badge (Task 5) — ប្តូរឈ្មោះ = badge URL ប្តូរ
@@ -56,11 +59,14 @@ defaults:
                                    # ► សំណួរ: បើ upload path សរសេរ target/surefire-reports/ (គ្មាន mini-shop/) កើតអ្វី? (hint: if-no-files-found)
 
 jobs:
-  build:
+  # ===================================================================================
+  # Job 1 — unit-test (លឿន: គ្មាន Docker, គ្មាន DB, ~20s ពេល cache hit)
+  # ឈ្មោះ job "unit-test" នឹងក្លាយជា status check ក្នុង branch protection (Task 5) — កុំប្តូរឈ្មោះដោយមិនប្តូរ setting
+  # ===================================================================================
+  unit-test:
     runs-on: ubuntu-24.04   # ► អ្វី: VM Ubuntu 24.04 (pin version) — មិនមែន ubuntu-latest
                             # ► សេណារីយ៉ូ: GitHub ប្តូរ ubuntu-latest → 26.04 ថ្ងៃណាមួយ → tool version ក្នុង runner ប្តូរ → build ខូចដោយអ្នកមិនបានប៉ះអ្វី
                             #   ជាមួយ 24.04: build ខូចតែពេល "អ្នក" ប្តូរ — ដឹងមូលហេតុភ្លាម (ច្បាប់ដដែលនឹង postgres:17, CLAUDE.md §4)
-                            # ► សំណួរ: runner image មាន Docker ស្រាប់ — Task 2 ត្រូវការវាសម្រាប់អ្វី?
     steps:
       # ---------------------------------------------------------------------------
       # Action pin ជា commit SHA + comment version
@@ -71,50 +77,76 @@ jobs:
       # ---------------------------------------------------------------------------
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # ► អ្វី: clone commit ដែលធ្វើឱ្យ run នេះកើតឡើង ចូល runner (VM ទទេស្អាតរាល់ run)
-        # ► សេណារីយ៉ូ: បើគ្មាន → runner គ្មាន code → step បន្ទាប់រកមិនឃើញ pom.xml
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin          # ► អ្វី: Eclipse Temurin — vendor ដដែលនឹង laptop (README) និង Dockerfile (eclipse-temurin:21)
           java-version: "21"             # ► អ្វី: ដូច <java.version>21 ក្នុង pom.xml — "Reproducible": Java ដដែលគ្រប់ទីកន្លែង
-                                         # ► សេណារីយ៉ូ: ដាក់ "17" → compile ខូច (record, pattern matching ជាដើម) ទោះ laptop ឆ្លង
           cache: maven                   # ► អ្វី: រក្សា ~/.m2/repository រវាង run (dependency ដែល download រួច)
                                          # ► សេណារីយ៉ូ (វាស់ពិត 2026-09-28): run ១ cache miss → build step 52s; run ២ cache hit → 17s
-                                         #   បើគ្មាន: រាល់ run download Spring Boot + Hibernate + ... ឡើងវិញ ~35s ខ្ជះខ្ជាយ
-          cache-dependency-path: mini-shop/pom.xml   # ► អ្វី: cache key = hash នៃ file នេះ
-                                                     # ► សេណារីយ៉ូ: បន្ថែម dependency ក្នុង pom.xml → hash ប្តូរ → cache miss ១ ដង → save key ថ្មី
-                                                     #   កែ src/ ប៉ុណ្ណោះ → hash ដដែល → cache hit
+          cache-dependency-path: mini-shop/pom.xml   # ► អ្វី: cache key = hash នៃ file នេះ → កែ pom.xml = cache miss ១ ដង
                                                      # ► សំណួរ: ហេតុអ្វីមិន cache target/ (compiled class) ដែរ? វានឹងបង្កបញ្ហាអ្វី?
 
-      - name: Build & unit test
-        run: ./mvnw -B verify -DskipITs
-        # ► អ្វី: ./mvnw = Maven wrapper (3.9.16 pin ក្នុង .mvn/wrapper/maven-wrapper.properties) — Maven ដដែលនឹង laptop និង Dockerfile
-        # ► សេណារីយ៉ូ: ប្រើ "mvn" ទទេ → version ណាដែល runner មាន (ប្តូរតាម image) → "run លើម៉ាស៊ីនខ្ញុំបាន" ត្រឡប់មកវិញ
-        # ► សេណារីយ៉ូ (ជួបពិត): mvnw មាន mode 100644 ក្នុង git → Linux: "Permission denied" → កែដោយ git update-index --chmod=+x
-        # ► -B (batch mode): គ្មាន progress bar/ពណ៌/សំណួរ interactive → log អានបាន, run មិនជាប់រង់ចាំ input
-        #   សំណួរ: បើគ្មាន -B log មើលទៅដូចម្តេច? (សាកលុប រួច push មើល log)
-        # ► verify -DskipITs: surefire run *Test.java (unit); failsafe រំលង *IT.java (ត្រូវការ Docker/Testcontainers → Task 2)
-        #   សំណួរ: ហេតុអ្វី "verify" មិនមែន "test"? ភាពខុសគ្នា phase ក្នុង Maven lifecycle?
-        # ► សេណារីយ៉ូ (ជួបពិត): MiniShopApplicationTests (@SpringBootTest ត្រូវការ DB) ឈ្មោះ *Tests → surefire run វា →
-        #   ធ្លាក់ក្នុង CI ព្រោះគ្មាន SPRING_DATASOURCE_* — ឆ្លងលើ laptop តែព្រោះ DB កំពុង run។ លុបចោល; OrderControllerIT គ្របដណ្តប់
+      - name: Unit test
+        run: ./mvnw -B test
+        # ► អ្វី: ./mvnw = Maven wrapper (3.9.16 pin) — Maven ដដែលនឹង laptop និង Dockerfile; -B = batch mode (log អានបាន)
+        # ► "test" ជំនួស "verify -DskipITs" (Task 1): lifecycle ឈប់ត្រឹម phase test → surefire run *Test.java តែប៉ុណ្ណោះ
+        #   failsafe ភ្ជាប់នឹង phase integration-test/verify ដែលមកក្រោយ → មិនដល់ → *IT.java មិន run ដោយស្វ័យប្រវត្តិ
+        # ► សេណារីយ៉ូ: unit test ធ្លាក់ → job នេះក្រហម → job integration-test ខាងក្រោម "skipped" (needs) → សន្សំ ~1 នាទី + Docker
+        # ► សំណួរ: Maven lifecycle: validate → compile → test → package → integration-test → verify. "test" ឈប់ត្រង់ណា? "verify" ធ្វើអ្វីបន្ថែម?
 
-      - name: Upload test report
-        if: always()   # ► អ្វី: run step នេះទោះ step មុនបរាជ័យ
-                       # ► សេណារីយ៉ូ: បើគ្មាន → test ធ្លាក់ → job ឈប់ភ្លាម → report មិនដែល upload → អ្នកឃើញតែ log វែង
-                       #   មានវា → test ធ្លាក់ → report upload → download មើល file .txt ដឹងថា assertion ណាខូច (លំហាត់ ២)
-                       # ► សំណួរ: always() ខុសពី failure() និង success() យ៉ាងណា? ពេលណាគួរប្រើ failure()?
+      - name: Upload unit test report
+        if: always()   # ► អ្វី: run step នេះទោះ test ធ្លាក់ — បើគ្មាន report មិនដែល upload ពេលដែលអ្នកត្រូវការវាបំផុត
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: surefire-reports                       # ► អ្វី: ឈ្មោះ artifact ដែលឃើញក្នុង Summary page របស់ run
-          path: mini-shop/target/surefire-reports/     # ► អ្វី: path ពី root (action មិនស្គាល់ working-directory — មើលខាងលើ)
-          if-no-files-found: warn                      # ► អ្វី: folder ទទេ (ឧ. compile ខូចមុន test) → warning មិនមែន error
-                                                       # ► សេណារីយ៉ូ: compile error → គ្មាន report → បើ "error" job ក្រហម ២ កន្លែង (compile + upload) ធ្វើឱ្យច្រឡំមូលហេតុ
-                                                       # ► សំណួរ: ពេលណា "error" សមរម្យជាង? (hint: artifact ដែល step ក្រោយត្រូវការ)
+          name: surefire-reports
+          path: mini-shop/target/surefire-reports/     # ► path ពី root (action មិនស្គាល់ working-directory)
+          if-no-files-found: warn
+
+  # ===================================================================================
+  # Job 2 — integration-test (យឺត: ត្រូវការ Docker + pull postgres:17 + boot Spring context)
+  # ===================================================================================
+  integration-test:
+    needs: unit-test        # ► អ្វី: run តែពេល job unit-test ឆ្លង (fail fast — ច្បាប់ ១ ក្នុង phase-a2-plan)
+                            # ► សេណារីយ៉ូ: បើគ្មាន needs → ២ job run ព្រមគ្នា: លឿនជាង (parallel) តែ unit ខូចក៏នៅតែចំណាយ Docker + DB ឥតប្រយោជន៍
+                            # ► សំណួរ: parallel (គ្មាន needs) vs sequential (មាន needs) — មួយណាល្អសម្រាប់គម្រោងនេះ? (ADR-004)
+    runs-on: ubuntu-24.04   # ► អ្វី: runner image នេះមាន Docker Engine ស្រាប់ → Testcontainers ប្រើបានដោយមិន setup អ្វី
+                            # ► សេណារីយ៉ូ: runner គ្មាន Docker (ឧ. macOS runner ខ្លះ) → "Could not find a valid Docker environment" → IT ទាំងអស់ error
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # ► សេណារីយ៉ូ: job នីមួយៗ = VM ថ្មី → ត្រូវ checkout ម្តងទៀត (តម្លៃនៃការបំបែក job ~5s)
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven                                 # ► សេណារីយ៉ូ: key ដដែលនឹង job unit-test → cache hit (unit-test save រួច) → មិន download ម្តងទៀត
+          cache-dependency-path: mini-shop/pom.xml
+
+      - name: Integration test (Testcontainers, postgres:17)
+        run: ./mvnw -B verify -DskipUnitTests
+        # ► អ្វី: "verify" ដល់ phase integration-test + verify → failsafe run *IT.java (OrderControllerIT)
+        #   -DskipUnitTests → surefire មិន run unit test ម្តងទៀត (run រួចក្នុង job ១)
+        # ► ប្រយ័ត្ន (ជួបពិត 2026-09-28): skipUnitTests មិនមែន property ដែល Maven ស្គាល់ដោយខ្លួនឯង —
+        #   វាជា property ដែល "យើង" កំណត់ក្នុង pom.xml (<skipUnitTests>false</skipUnitTests> + surefire <skipTests>${skipUnitTests}</skipTests>)
+        #   property ដែលមានស្រាប់: skipITs (failsafe ប៉ុណ្ណោះ), skipTests (ទាំង ២), maven.test.skip (មិន compile test ផង)
+        #   សាក -Dsurefire.skip=true មុន → Maven មិនស្គាល់ → unit test run ២ ដងដោយស្ងាត់ (គ្មាន error!) → ត្រូវមើល log ថា "Tests run" ចេញពី plugin ណា
+        # ► សេណារីយ៉ូ: OrderControllerIT boot Spring + Flyway migrate លើ postgres:17 ពិតក្នុង Docker → បញ្ជាក់ rollback ពិត (CLAUDE.md §5.7)
+        #   ខុសពី services: postgres របស់ GitHub Actions — version pin នៅក្នុង test code (postgres:17) មិនមែនក្នុង YAML → laptop និង CI ដូចគ្នាទាំងស្រុង
+        # ► សំណួរ: Testcontainers vs services: postgres — ហេតុអ្វីយើងជ្រើស Testcontainers? (learning-log Task 2)
+
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: failsafe-reports                       # ► failsafe សរសេរ report ទៅ target/failsafe-reports/ (មិនមែន surefire-reports)
+          path: mini-shop/target/failsafe-reports/
+          if-no-files-found: warn
 
 # =====================================================================================
 # សំណួរ review សរុប (ឆ្លើយក្នុង docs/learning-log.md)
-#   1. Workflow នេះ run លើ commit ដែលកែតែ docs/*.md ដែរ — ខ្ជះខ្ជាយ ~30s។ គួរបន្ថែម on.push.paths ឬអត់?
+#   1. Workflow នេះ run លើ commit ដែលកែតែ docs/*.md ដែរ — ខ្ជះខ្ជាយ ~1 នាទី។ គួរបន្ថែម on.push.paths ឬអត់?
 #      hint: Task 5 "Require status checks" — បើ workflow មិន run, check មិន report → PR docs-only merge មិនបាន
-#   2. បើ CI បៃតង តែ app crash ពេល run ពិត — workflow នេះខ្វះអ្វី? (Task 2 ដោះស្រាយផ្នែកមួយ)
-#   3. Job តែមួយឥឡូវ។ Task 2 នឹងបំបែក unit-test / integration-test — អ្នកចង់ fail fast យ៉ាងណា?
+#   2. បើ CI បៃតង តែ app crash ពេល run ពិត — workflow នេះខ្វះអ្វី? (Task 3 build image ដោះស្រាយផ្នែកមួយ)
+#   3. Job integration-test compile code ម្តងទៀត (VM ថ្មី) — ចំណាយប៉ុន្មានវិនាទី? ជម្រើសជៀសវាង (upload target/ ជា artifact) សមឬអត់?
 # =====================================================================================

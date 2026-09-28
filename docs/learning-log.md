@@ -261,3 +261,56 @@ _(សរសេរនៅទីនេះ)_
 - **ច្បាប់ "Reproducible" ត្រូវសាកល្បងមុន push:** run `mvn -B verify -DskipITs` លើ laptop ដោយ**ដក** env var `SPRING_DATASOURCE_*` ចេញ (ដូច CI runner) → `MiniShopApplicationTests.contextLoads` **ធ្លាក់** (`Failed to load ApplicationContext` — datasource url ទទេ)។ Test នេះឆ្លងលើ laptop កាលពី Phase A តែព្រោះ env var ចង្អុលទៅ DB ដែលកំពុង run — មិនមែនព្រោះ test ត្រឹមត្រូវ។
 - **ការសម្រេចចិត្ត:** លុប `MiniShopApplicationTests` ចោល។ ហេតុផល: (ក) វាជា `@SpringBootTest` ដែលត្រូវការ DB ពិត តែឈ្មោះ `*Tests` ធ្វើឱ្យ surefire run វាជា unit test; (ខ) `OrderControllerIT` boot context ពេញជាមួយ `postgres:17` រួចហើយ → "context loads" ត្រូវបានគ្របដណ្តប់ក្នុង Task 2។ ជម្រើសផ្សេង: ប្តូរឈ្មោះជា `*IT` + Testcontainers (container ទី២ → IT យឺតជាង ដោយគ្មានតម្លៃបន្ថែម)។
   - សំណួរ: ប្រសិនបើថ្ងៃក្រោយមាន bean ដែល `OrderControllerIT` មិនប៉ះ (ឧ. scheduler) ហើយ config ខុស — test ណានឹងចាប់បាន? ត្រូវការ `contextLoads` ត្រឡប់វិញឬអត់?
+
+### លំហាត់ ២ — លទ្ធផលពិត (2026-09-28)
+
+កែ `"39.48"` → `"99.99"` ក្នុង `OrderServiceTest` → push `develop` → run ក្រហមក្នុង ២៨ វិនាទី → step "Upload test report" នៅតែ run (`if: always()`) → artifact `surefire-reports` 9.7 KB។ កែត្រឡប់ → push → បៃតង។
+
+**អ្វីដែលឃើញក្នុង file `.txt` របស់ artifact ខុសពី log យ៉ាងណា?**
+
+_(សរសេរនៅទីនេះ)_
+
+---
+
+## Phase A2 / Task 2 — Integration test ក្នុង CI (2026-09-28)
+
+File: `.github/workflows/ci.yml` (job `unit-test` + `integration-test`), `mini-shop/pom.xml` (property `skipUnitTests`), ADR: `docs/decisions/004-ci-job-structure.md`
+
+### សំណួរឆ្លុះបញ្ចាំង (ពី `phase-a2-plan.md` Task 2)
+
+**១. ជម្រើស A (job តែមួយ) vs B (២ job) — មួយណាល្អជាងសម្រាប់គម្រោងនេះ?**
+ADR-004 ស្នើ B ជាមួយហេតុផល — អ្នកយល់ស្របឬអត់? ឆ្លើយសំណួរ ៣ ចុង ADR-004 នៅទីនេះ រួចប្តូរ status ADR ជា Accepted (ឬកែការសម្រេចចិត្ត)។
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+**២. Testcontainers ក្នុង CI ខុសពី `services: postgres:` របស់ GitHub Actions យ៉ាងណា? ហេតុអ្វីយើងជ្រើស Testcontainers?**
+hint: អ្នកណាកំណត់ version DB — YAML ឬ test code? test run លើ laptop ដោយគ្មាន DB ដោយដៃបានឬអត់?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### សំណួរ review ក្នុង `ci.yml` (Task 2)
+
+| បន្ទាត់ | សំណួរ | ចម្លើយ |
+|---|---|---|
+| `./mvnw -B test` (job unit) | Maven lifecycle `validate → compile → test → package → integration-test → verify`: `test` ឈប់ត្រង់ណា? ហេតុអ្វី failsafe មិន run? | _(សរសេរ)_ |
+| `needs: unit-test` | parallel vs sequential — ខុសគ្នាពេលវេលាប៉ុន្មានពេលទាំងអស់ឆ្លង? ពេល unit ខូច? | _(សរសេរ)_ |
+| `-DskipUnitTests` | ហេតុអ្វីត្រូវកំណត់ក្នុង `pom.xml` ខ្លួនឯង? `skipTests` ធ្វើអ្វី? | _(សរសេរ)_ |
+| `cache: maven` ក្នុង job ២ | job ២ cache hit ឬ miss? ហេតុអ្វី? | _(សរសេរ)_ |
+| `failsafe-reports` | ហេតុអ្វី report នៅ folder ផ្សេងពី surefire? | _(សរសេរ)_ |
+
+### លំហាត់ — វាស់ពេលវេលា
+
+- Run Task 1 (job តែមួយ, unit ប៉ុណ្ណោះ): 33s (cache hit)
+- Run Task 2 (unit-test + integration-test): សរុប ______ · job unit-test ______ · job integration-test ______ · step IT ______
+- Testcontainers pull `postgres:17` ក្នុង runner: ______ វិនាទី (មើលក្នុង log "Pulling docker image")
+- យឺតជាង Task 1 ប៉ុន្មាន? ផ្នែកណាចំណាយច្រើនបំផុត?
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 2
+
+- **`-Dsurefire.skip=true` មិនដំណើរការ** — សាកលើ laptop: surefire នៅតែ run 6 unit test រួច failsafe run 3 IT (`BUILD SUCCESS`, គ្មាន error, គ្មាន warning!)។ Maven **មិនស្គាល់** property នោះ ហើយក៏មិនប្រាប់អ្នកដែរ — property ខុសឈ្មោះ = ស្ងាត់ៗមិនធ្វើអ្វី។ មេរៀន: ពេលបន្ថែម flag ត្រូវ**មើល log ថាវាមានឥទ្ធិពលពិត** មិនមែនមើលតែ exit code។
+- ដំណោះស្រាយ: property `skipUnitTests` ក្នុង `pom.xml` (default `false`) wire ចូល surefire `<skipTests>${skipUnitTests}</skipTests>`។ ផ្ទៀងផ្ទាត់: `mvn -B verify -DskipUnitTests` → log ត្រូវបង្ហាញ "Tests are skipped" ពី surefire និង "Tests run: 3" ពី failsafe។
+- IT លើ laptop: `postgres:17` start ក្នុង 0.8s (image មានស្រាប់), `OrderControllerIT` 27s សរុប (Spring boot + Flyway)។ ក្នុង CI runner image ត្រូវ pull ថ្មីរាល់ run — ប្រៀបធៀបពេលវេលា។
