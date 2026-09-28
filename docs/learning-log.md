@@ -261,3 +261,105 @@ _(សរសេរនៅទីនេះ)_
 - **ច្បាប់ "Reproducible" ត្រូវសាកល្បងមុន push:** run `mvn -B verify -DskipITs` លើ laptop ដោយ**ដក** env var `SPRING_DATASOURCE_*` ចេញ (ដូច CI runner) → `MiniShopApplicationTests.contextLoads` **ធ្លាក់** (`Failed to load ApplicationContext` — datasource url ទទេ)។ Test នេះឆ្លងលើ laptop កាលពី Phase A តែព្រោះ env var ចង្អុលទៅ DB ដែលកំពុង run — មិនមែនព្រោះ test ត្រឹមត្រូវ។
 - **ការសម្រេចចិត្ត:** លុប `MiniShopApplicationTests` ចោល។ ហេតុផល: (ក) វាជា `@SpringBootTest` ដែលត្រូវការ DB ពិត តែឈ្មោះ `*Tests` ធ្វើឱ្យ surefire run វាជា unit test; (ខ) `OrderControllerIT` boot context ពេញជាមួយ `postgres:17` រួចហើយ → "context loads" ត្រូវបានគ្របដណ្តប់ក្នុង Task 2។ ជម្រើសផ្សេង: ប្តូរឈ្មោះជា `*IT` + Testcontainers (container ទី២ → IT យឺតជាង ដោយគ្មានតម្លៃបន្ថែម)។
   - សំណួរ: ប្រសិនបើថ្ងៃក្រោយមាន bean ដែល `OrderControllerIT` មិនប៉ះ (ឧ. scheduler) ហើយ config ខុស — test ណានឹងចាប់បាន? ត្រូវការ `contextLoads` ត្រឡប់វិញឬអត់?
+
+### លំហាត់ ២ — លទ្ធផលពិត (2026-09-28)
+
+កែ `"39.48"` → `"99.99"` ក្នុង `OrderServiceTest` → push `develop` → run ក្រហមក្នុង ២៨ វិនាទី → step "Upload test report" នៅតែ run (`if: always()`) → artifact `surefire-reports` 9.7 KB។ កែត្រឡប់ → push → បៃតង។
+
+**អ្វីដែលឃើញក្នុង file `.txt` របស់ artifact ខុសពី log យ៉ាងណា?**
+
+_(សរសេរនៅទីនេះ)_
+
+---
+
+## Phase A2 / Task 2 — Integration test ក្នុង CI (2026-09-28)
+
+File: `.github/workflows/ci.yml` (job `unit-test` + `integration-test`), `mini-shop/pom.xml` (property `skipUnitTests`), ADR: `docs/decisions/004-ci-job-structure.md`
+
+### សំណួរឆ្លុះបញ្ចាំង (ពី `phase-a2-plan.md` Task 2)
+
+**១. ជម្រើស A (job តែមួយ) vs B (២ job) — មួយណាល្អជាងសម្រាប់គម្រោងនេះ?**
+ADR-004 ស្នើ B ជាមួយហេតុផល — អ្នកយល់ស្របឬអត់? ឆ្លើយសំណួរ ៣ ចុង ADR-004 នៅទីនេះ រួចប្តូរ status ADR ជា Accepted (ឬកែការសម្រេចចិត្ត)។
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+**២. Testcontainers ក្នុង CI ខុសពី `services: postgres:` របស់ GitHub Actions យ៉ាងណា? ហេតុអ្វីយើងជ្រើស Testcontainers?**
+hint: អ្នកណាកំណត់ version DB — YAML ឬ test code? test run លើ laptop ដោយគ្មាន DB ដោយដៃបានឬអត់?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### សំណួរ review ក្នុង `ci.yml` (Task 2)
+
+| បន្ទាត់ | សំណួរ | ចម្លើយ |
+|---|---|---|
+| `./mvnw -B test` (job unit) | Maven lifecycle `validate → compile → test → package → integration-test → verify`: `test` ឈប់ត្រង់ណា? ហេតុអ្វី failsafe មិន run? | _(សរសេរ)_ |
+| `needs: unit-test` | parallel vs sequential — ខុសគ្នាពេលវេលាប៉ុន្មានពេលទាំងអស់ឆ្លង? ពេល unit ខូច? | _(សរសេរ)_ |
+| `-DskipUnitTests` | ហេតុអ្វីត្រូវកំណត់ក្នុង `pom.xml` ខ្លួនឯង? `skipTests` ធ្វើអ្វី? | _(សរសេរ)_ |
+| `cache: maven` ក្នុង job ២ | job ២ cache hit ឬ miss? ហេតុអ្វី? | _(សរសេរ)_ |
+| `failsafe-reports` | ហេតុអ្វី report នៅ folder ផ្សេងពី surefire? | _(សរសេរ)_ |
+
+### លំហាត់ — វាស់ពេលវេលា
+
+- Run Task 1 (job តែមួយ, unit ប៉ុណ្ណោះ): 33s (cache hit)
+- Run Task 2 (unit-test + integration-test): សរុប 1m39s · job unit-test 42s (step 29s, cache miss ព្រោះ pom.xml ប្តូរ → key ថ្មី) · job integration-test 51s (step 40s, cache hit ពី key ដែល unit-test save)
+- Testcontainers pull `postgres:17` ក្នុង runner: 8 វិនាទី (05:11:31 → 05:11:39), ryuk 1.5s; container start 1.0s; OrderControllerIT 22s
+- យឺតជាង Task 1 ប៉ុន្មាន? ផ្នែកណាចំណាយច្រើនបំផុត?
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 2
+
+- **`-Dsurefire.skip=true` មិនដំណើរការ** — សាកលើ laptop: surefire នៅតែ run 6 unit test រួច failsafe run 3 IT (`BUILD SUCCESS`, គ្មាន error, គ្មាន warning!)។ Maven **មិនស្គាល់** property នោះ ហើយក៏មិនប្រាប់អ្នកដែរ — property ខុសឈ្មោះ = ស្ងាត់ៗមិនធ្វើអ្វី។ មេរៀន: ពេលបន្ថែម flag ត្រូវ**មើល log ថាវាមានឥទ្ធិពលពិត** មិនមែនមើលតែ exit code។
+- ដំណោះស្រាយ: property `skipUnitTests` ក្នុង `pom.xml` (default `false`) wire ចូល surefire `<skipTests>${skipUnitTests}</skipTests>`។ ផ្ទៀងផ្ទាត់: `mvn -B verify -DskipUnitTests` → log ត្រូវបង្ហាញ "Tests are skipped" ពី surefire និង "Tests run: 3" ពី failsafe។
+- IT លើ laptop: `postgres:17` start ក្នុង 0.8s (image មានស្រាប់), `OrderControllerIT` 27s សរុប (Spring boot + Flyway)។ ក្នុង CI runner image ត្រូវ pull ថ្មីរាល់ run — ប្រៀបធៀបពេលវេលា។
+
+---
+
+## Phase A2 / Task 3 — Build & push image ទៅ ghcr.io (2026-09-28)
+
+File: `.github/workflows/ci.yml` job `docker` (run តែពេល push ទៅ `main`)។ Image: `ghcr.io/vuthin-devops-ecommerce/mini-shop:<short-sha>` និង `:latest`។
+
+### ចំណុចត្រូវយល់ (ពី `phase-a2-plan.md` Task 3)
+
+| ចំណុច | សំណួរ | ចម្លើយ |
+|---|---|---|
+| `GITHUB_TOKEN` | ហេតុអ្វីល្អជាង Personal Access Token? ពេលណា PAT នៅតែត្រូវការ? | _(សរសេរ)_ |
+| tag `sha` + `latest` | ហេតុអ្វី**មិនត្រូវ** deploy `:latest` ទៅ production? (immutability) | _(សរសេរ)_ |
+| `cache-from/to: type=gha` | build មុន cache ______ ក្រោយ ______ — layer ណា hit? | _(សរសេរ)_ |
+| `if: github.ref == 'refs/heads/main'` | ហេតុអ្វី PR មិន push image? | _(សរសេរ)_ |
+
+### សំណួរ review បន្ថែម (ពី comment ក្នុង job `docker`)
+
+1. `permissions: packages: write` នៅកម្រិត job មិនមែន workflow — ខុសគ្នាអ្វីខាង security?
+2. `setup-buildx-action` — ហេតុអ្វីត្រូវការសម្រាប់ `cache type=gha`? បើគ្មានកើតអ្វី?
+3. `cache: maven` (setup-java) និង Docker layer cache ជា cache ២ ផ្សេងគ្នា — ហេតុអ្វី Docker build (multi-stage) មិនប្រើ `~/.m2` របស់ runner?
+4. **ជម្លោះ `:latest`:** CLAUDE.md §4 ថា "គ្មាន tag latest" តែផែនការ Task 3 DoD ឱ្យ push `:latest`។ ខ្ញុំ (Claude) សម្រេចរក្សា `:latest` ជា tag "ផលិត" តែ**មិនដែលប្រើ** (compose/K8s ប្រើ `:<sha>`)។ អ្នកយល់ស្របឬចង់ដកចេញ? សរសេរហេតុផល — នេះជាការសម្រេចចិត្តរបស់អ្នក។
+5. Image name `mini-shop` (តាម phase-a3-plan) ខណៈ repo ឈ្មោះ `ecom-api` — ghcr ភ្ជាប់ package ទៅ repo ដោយរបៀបណា? (hint: label `org.opencontainers.image.source`)
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### របៀបសាកល្បង Task 3 (job run តែលើ `main`)
+
+1. បើក PR `develop → main` លើ GitHub → CI run លើ PR (unit + IT, **គ្មាន** docker — មើលថា job docker បង្ហាញ "skipped")
+2. Merge PR → run លើ `main` → job `docker` run → Summary page បង្ហាញ tag
+3. ផ្ទៀងផ្ទាត់លើ laptop (package private → ត្រូវ login):
+   ```bash
+   echo $GH_PAT | docker login ghcr.io -u thiravuthin --password-stdin   # ឬ gh auth token | docker login ghcr.io -u thiravuthin --password-stdin
+   docker pull ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>
+   docker run --rm -e SPRING_DATASOURCE_URL=x -e SPRING_DATASOURCE_USERNAME=x -e SPRING_DATASOURCE_PASSWORD=x ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>
+   ```
+   (crash ព្រោះគ្មាន DB — តែ pull និង start បាន = image ត្រឹមត្រូវ)
+4. លំហាត់: កែ `compose.yaml` ឱ្យ `app` ប្រើ `image: ghcr.io/.../mini-shop:<sha>` ជំនួស `build: .` → `docker compose up` លើម៉ាស៊ីនគ្មាន Java/Maven
+
+### លំហាត់ — វាស់
+
+- Docker build run ១ (cache miss): ______ · run ២ (កែតែ src/): ______ · layer ណា hit / miss?
+- Image size (`docker images`): ______ MB — ធៀបនឹង `mini-shop:local` ពី Phase A?
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 3
+
+_(សរសេរនៅទីនេះ)_
