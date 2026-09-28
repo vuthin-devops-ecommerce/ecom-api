@@ -201,3 +201,63 @@ _(ចម្លងនៅទីនេះ)_
 **ចម្លើយ:**
 
 _(សរសេរនៅទីនេះ)_
+
+---
+
+## Phase A2 / Task 0 — Repo → GitHub (2026-09-28)
+
+Repo មានលើ GitHub រួចហើយ (`vuthin-devops-ecommerce/ecom-api`, private, branch `main`)។ ថ្ងៃនេះបន្ថែម branch `develop` និង folder `.github/workflows/`។
+
+### សំណួរ ១ (ពី `phase-a2-plan.md` Task 0)
+
+ហេតុអ្វីមិន push ផ្ទាល់ទៅ `main`? ការងារជាក្រុមធំមានបញ្ហាអ្វីបើអ្នកគ្រប់គ្នាធ្វើដូចនោះ?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 0
+
+- `git ls-files -s mini-shop/mvnw` បង្ហាញ mode `100644` (មិន executable) — Windows មិនរក្សា exec bit, ដូច្នេះ Linux runner នឹងបាន `Permission denied` ពេល `./mvnw`។ Dockerfile ដោះស្រាយដោយ `chmod +x` (រោគសញ្ញា) — ថ្ងៃនេះកែមូលហេតុដោយ `git update-index --chmod=+x mini-shop/mvnw` → `100755`។
+- Maven wrapper (`./mvnw` ក្នុង Git Bash) download មិនបានលើ laptop: `curl: (35) schannel ... CRYPT_E_NO_REVOCATION_CHECK` — បញ្ហា TLS revocation check លើម៉ាស៊ីននេះ មិនមែនបញ្ហា project។ ផ្ទៀងផ្ទាត់ក្នុងមូលដ្ឋានដោយ `mvn` (3.9.16 ដដែលនឹង wrapper) ជំនួស។ CI runner មិនមានបញ្ហានេះ។
+
+---
+
+## Phase A2 / Task 1 — Build + unit test (2026-09-28)
+
+File: `.github/workflows/ci.yml`
+
+### ចំណុចត្រូវយល់ក្នុង YAML (ពី `phase-a2-plan.md` Task 1)
+
+| បន្ទាត់ | សំណួរ | ចម្លើយ |
+|---|---|---|
+| `concurrency` + `cancel-in-progress` | បើអ្នក push ៣ ដងក្នុង ១ នាទី កើតអ្វី? ហេតុអ្វីសន្សំលុយ? | _(សរសេរនៅទីនេះ)_ |
+| `permissions: contents: read` | បើមិនកំណត់ default ជាអ្វី? ហេតុអ្វីគ្រោះថ្នាក់? | _(សរសេរនៅទីនេះ)_ |
+| `cache: maven` | cache key គឺអ្វី? ពេលណា cache miss? | _(សរសេរនៅទីនេះ)_ |
+| `if: always()` | បើអត់ ហេតុអ្វី test report មិនដែលឃើញពេលបរាជ័យ? | _(សរសេរនៅទីនេះ)_ |
+| `-B` | batch mode — ហេតុអ្វីសំខាន់ក្នុង CI? | _(សរសេរនៅទីនេះ)_ |
+
+### សំណួរ review បន្ថែម (ពីការសម្រេចចិត្តរចនាក្នុង `ci.yml`)
+
+1. Action pin ជា commit SHA (`actions/checkout@3d3c42e...` + comment `# v7.0.1`) ជំនួស `@v4` — អ្នកណាអាចផ្លាស់ទី tag `v4`? SHA ខុសគ្នាយ៉ាងណា? តម្លៃដែលត្រូវបង់គឺអ្វី (hint: Dependabot Task 5)?
+2. `runs-on: ubuntu-24.04` ជំនួស `ubuntu-latest` — ទាក់ទងច្បាប់ណាក្នុង `CLAUDE.md` §4? បើ GitHub ប្តូរ `ubuntu-latest` ទៅ 26.04 កើតអ្វីចំពោះ build?
+3. `defaults.run.working-directory: mini-shop` អនុវត្តលើ `run:` ប៉ុណ្ណោះ — ហេតុអ្វី `path:` ក្នុង `upload-artifact` និង `cache-dependency-path` ត្រូវសរសេរ `mini-shop/...` ពេញ?
+4. Workflow run លើ push គ្រប់ branch **រួមទាំង docs-only commit** — គួរបន្ថែម `paths:` filter ឬអត់? (hint: Task 5 "Require status checks" — បើ workflow មិន run, check មិនដែល report → PR merge មិនបាន)
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### លំហាត់
+
+1. Run ទី១ (push `develop`): ______ (បៃតង/ក្រហម) — ពេលវេលា ______
+2. ធ្វើឱ្យខូចដោយចេតនា: កែ test មួយឱ្យបរាជ័យ → push → run ក្រហម → download `surefire-reports` artifact → ឃើញអ្វីក្នុង file `.txt`?
+   - _(សរសេរនៅទីនេះ)_
+3. Run ទី២ (cache hit): ពេលវេលា ______ — ខុសពីទី១ ______ វិនាទី។ step ណាលឿនជាង? ហេតុអ្វី?
+   - _(សរសេរនៅទីនេះ)_
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 1
+
+- **ច្បាប់ "Reproducible" ត្រូវសាកល្បងមុន push:** run `mvn -B verify -DskipITs` លើ laptop ដោយ**ដក** env var `SPRING_DATASOURCE_*` ចេញ (ដូច CI runner) → `MiniShopApplicationTests.contextLoads` **ធ្លាក់** (`Failed to load ApplicationContext` — datasource url ទទេ)។ Test នេះឆ្លងលើ laptop កាលពី Phase A តែព្រោះ env var ចង្អុលទៅ DB ដែលកំពុង run — មិនមែនព្រោះ test ត្រឹមត្រូវ។
+- **ការសម្រេចចិត្ត:** លុប `MiniShopApplicationTests` ចោល។ ហេតុផល: (ក) វាជា `@SpringBootTest` ដែលត្រូវការ DB ពិត តែឈ្មោះ `*Tests` ធ្វើឱ្យ surefire run វាជា unit test; (ខ) `OrderControllerIT` boot context ពេញជាមួយ `postgres:17` រួចហើយ → "context loads" ត្រូវបានគ្របដណ្តប់ក្នុង Task 2។ ជម្រើសផ្សេង: ប្តូរឈ្មោះជា `*IT` + Testcontainers (container ទី២ → IT យឺតជាង ដោយគ្មានតម្លៃបន្ថែម)។
+  - សំណួរ: ប្រសិនបើថ្ងៃក្រោយមាន bean ដែល `OrderControllerIT` មិនប៉ះ (ឧ. scheduler) ហើយ config ខុស — test ណានឹងចាប់បាន? ត្រូវការ `contextLoads` ត្រឡប់វិញឬអត់?

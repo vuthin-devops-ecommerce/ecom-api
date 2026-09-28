@@ -285,8 +285,8 @@ updates:
 
 | Task | ស្ថានភាព | ថ្ងៃបញ្ចប់ | ពេលវេលា CI run |
 |---|---|---|---|
-| 0 Repo → GitHub | ⬜ | | — |
-| 1 Build + unit test | ⬜ | | ទី១: __ ទី២: __ |
+| 0 Repo → GitHub | ✅ | 2026-09-28 | — |
+| 1 Build + unit test | 🟡 | | ទី១: 1m09s (cache miss, build step 52s) ទី២: 33s (cache hit, build step 17s) |
 | 2 Integration test | ⬜ | | |
 | 3 Image → ghcr.io | ⬜ | | build មុន cache: __ ក្រោយ: __ |
 | 4 Trivy | ⬜ | | CVE រកឃើញ: __ |
