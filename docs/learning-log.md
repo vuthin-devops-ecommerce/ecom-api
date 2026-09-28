@@ -362,4 +362,7 @@ _(សរសេរនៅទីនេះ)_
 
 ### អ្វីដែលជួបពិតពេលធ្វើ Task 3
 
+- **Run ដំបូងលើ `main` ធ្លាក់ក្នុង 1s** (run 36386015912): `ERROR: invalid tag "ghcr.io/.../mini-shop:-tag-short-git-sha-7-.-dd44792-immutable-sha-image-56abbbb": invalid reference format`។ មូលហេតុ: comment `# ...` ដែលដាក់នៅចុងបន្ទាត់**ក្នុង** YAML block scalar (`tags: |`) មិនមែន comment ទេ — វាជាអត្ថបទ → metadata-action យកវាចូល tag។ លំដាប់រកឃើញ: job → step ណាក្រហម (build-push, 1s = មិនទាន់ build) → log បន្ទាត់ `docker buildx build ... --tag` ឃើញ tag ចម្លែក → ថយក្រោយទៅ YAML។ actionlint មិនចាប់។ កែ: ដក comment ចេញពី block ដាក់ខាងលើ។
+- PR run (36385865494): job `docker` = skipped ✅ (`if:` ដំណើរការ)។ Commit ដដែលបាន run ២ ដង (event `push` លើ develop + `pull_request`) — concurrency group ខុសគ្នា (`refs/heads/develop` vs `refs/pull/2/merge`) ដូច្នេះមិន cancel គ្នា → ចម្លើយសំណួរ Task 1 "run ២ ដងឬ?" = បាទ។
+
 _(សរសេរនៅទីនេះ)_
