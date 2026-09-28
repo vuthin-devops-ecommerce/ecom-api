@@ -61,7 +61,7 @@ class OrderServiceTest {
 
         assertThat(response.id()).isEqualTo(42L);
         assertThat(response.status()).isEqualTo(OrderStatus.CREATED);
-        assertThat(response.totalAmount()).isEqualByComparingTo("99.99");
+        assertThat(response.totalAmount()).isEqualByComparingTo("39.48");
         assertThat(response.items()).hasSize(2);
         assertThat(response.items().get(0).priceAtOrder()).isEqualByComparingTo("9.99");
         verify(productService).decreaseStock(1L, 2);
