@@ -285,7 +285,7 @@ updates:
 
 | Task | ស្ថានភាព | ថ្ងៃបញ្ចប់ | ពេលវេលា CI run |
 |---|---|---|---|
-| 0 Repo → GitHub | ⬜ | | — |
+| 0 Repo → GitHub | ✅ | 2026-09-28 | — |
 | 1 Build + unit test | ⬜ | | ទី១: __ ទី២: __ |
 | 2 Integration test | ⬜ | | |
 | 3 Image → ghcr.io | ⬜ | | build មុន cache: __ ក្រោយ: __ |

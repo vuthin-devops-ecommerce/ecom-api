@@ -1,0 +1,57 @@
+# Phase A2 Task 1 — build + unit test on every push.
+# Design notes live in docs/phase-a2-plan.md; reflection answers in docs/learning-log.md.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, develop]
+
+# A newer push on the same branch cancels the run still in progress for the older commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: this workflow only reads the repo. Jobs that need more (e.g. packages: write
+# for ghcr.io in Task 3) must ask for it explicitly at job level.
+permissions:
+  contents: read
+
+# Monorepo: the app lives in mini-shop/, not at the repo root (CLAUDE.md §1).
+# `defaults.run.working-directory` applies to `run:` steps only — NOT to `uses:` steps,
+# so paths given to actions (cache-dependency-path, upload path) are written from the repo root.
+defaults:
+  run:
+    working-directory: mini-shop
+
+jobs:
+  build:
+    # Pinned runner image, not ubuntu-latest — same "no latest" rule as postgres:17 (CLAUDE.md §4).
+    runs-on: ubuntu-24.04
+    steps:
+      # Actions are pinned to a commit SHA (immutable) with the version tag as a comment.
+      # A tag like @v7 can be moved by the action's maintainer; a SHA cannot.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"            # same as <java.version> in pom.xml and the Dockerfile
+          cache: maven                  # caches ~/.m2/repository; key = hash of the file below
+          cache-dependency-path: mini-shop/pom.xml
+
+      # ./mvnw (wrapper) — same Maven 3.9.16 as on the laptop and inside the Dockerfile.
+      # -DskipITs: failsafe skips *IT.java (needs Docker/Testcontainers) — that is Task 2.
+      - name: Build & unit test
+        run: ./mvnw -B verify -DskipITs
+
+      # if: always() — without it this step is skipped when tests fail, which is exactly
+      # when you need the report.
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: surefire-reports
+          path: mini-shop/target/surefire-reports/
+          if-no-files-found: warn
