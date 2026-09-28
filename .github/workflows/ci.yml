@@ -143,6 +143,80 @@ jobs:
           path: mini-shop/target/failsafe-reports/
           if-no-files-found: warn
 
+  # ===================================================================================
+  # Job 3 — docker (Task 3): build image → push ទៅ ghcr.io — run តែពេល push ទៅ main
+  # Image: ghcr.io/vuthin-devops-ecommerce/mini-shop:<short-sha> និង :latest (ឈ្មោះដូច phase-a3-plan ប្រើ)
+  # ===================================================================================
+  docker:
+    needs: [unit-test, integration-test]   # ► អ្វី: build image តែពេល test ទាំង ២ job បៃតង
+                                           # ► សេណារីយ៉ូ: IT ខូច → job នេះ skipped → registry មិនដែលមាន image ដែល test ធ្លាក់
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # ► អ្វី: run តែពេល "push ទៅ main" — PR និង branch ផ្សេង (develop) មិន push image
+      # ► សេណារីយ៉ូ: PR ពី fork/branch push image បាន → registry ពេញដោយ image ដែលមិនដែល release; អ្នកណាក៏ overwrite :latest បាន
+      #   គ្មាន event_name == 'push' → pull_request ទៅ main ក៏ match github.ref? (មិនទេ — PR ref ជា refs/pull/N/merge — តែសរសេរច្បាស់ល្អជាង)
+      # ► សំណួរ: main ទទួលបានតែពី merge PR (Task 5) — ដូច្នេះ "push ទៅ main" = "release" ។ ហេតុអ្វីនេះជាការរចនាដែលចង់បាន?
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read      # ► checkout
+      packages: write     # ► អ្វី: push ទៅ ghcr.io — ប្រកាសនៅ job នេះប៉ុណ្ណោះ (least privilege): job test ២ ខាងលើនៅតែ read-only
+                          # ► សេណារីយ៉ូ: បើដាក់ packages: write នៅកម្រិត workflow → test ដែល run code ពី dependency ក៏មានសិទ្ធិ push image ដែរ
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        # ► អ្វី: BuildKit builder (driver docker-container) — ត្រូវការសម្រាប់ cache type=gha ខាងក្រោម
+        # ► សេណារីយ៉ូ: បើគ្មាន → build-push-action ប្រើ docker driver ធម្មតា → "cache export is not supported for the docker driver"
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}              # ► អ្នកដែល trigger run (username GitHub)
+          password: ${{ secrets.GITHUB_TOKEN }}      # ► អ្វី: token ដែល GitHub បង្កើតរាល់ run, អស់សុពលភាពពេល run ចប់, សិទ្ធិតាម permissions: ខាងលើ
+                                                     # ► សេណារីយ៉ូ: PAT (Personal Access Token) ជំនួស → ត្រូវបង្កើតដោយដៃ, រស់រហូតដល់លុប, ដាក់ក្នុង secret, rotate ខ្លួនឯង
+                                                     #   បើលេចធ្លាយ = អ្នកលួចមានសិទ្ធិដូចអ្នក រហូត; GITHUB_TOKEN លេចធ្លាយ = ឥតប្រយោជន៍ក្រោយ run ចប់
+                                                     # ► សំណួរ: ពេលណា GITHUB_TOKEN មិនគ្រប់គ្រាន់ ត្រូវការ PAT? (hint: push ទៅ repo/org ផ្សេង)
+
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        id: meta                                     # ► id ដើម្បី step ក្រោយយក outputs.tags / outputs.labels
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mini-shop   # ► ghcr.io/vuthin-devops-ecommerce/mini-shop (owner ត្រូវជាអក្សរតូច — ghcr តម្រូវ)
+          tags: |
+            type=sha,prefix=            # ► tag = short git sha (7 តួ) ឧ. :dd44792 — immutable: sha ១ = image ១ ជានិច្ច
+            type=raw,value=latest       # ► tag ចល័ត: ចង្អុលទៅ build ចុងក្រោយពី main
+          # ► ជម្លោះដោយចេតនា: CLAUDE.md §4 "គ្មាន tag latest" — ច្បាប់នោះសម្រាប់ "ការប្រើ" (pull/deploy) image
+          #   យើង "ផលិត" :latest តាមផែនការ Task 3 (DoD) តែ**មិនដែល deploy** វា — compose/K8s ប្រើ :<sha> ប៉ុណ្ណោះ (Task 3 លំហាត់, phase-a3)
+          # ► សេណារីយ៉ូ: deploy :latest → rollback មិនបាន (latest ចាស់បាត់រួច), pod ២ ក្នុង cluster ដដែលអាច run image ខុសគ្នា ក្រោយ node pull ពេលខុសគ្នា
+          # ► សំណួរ: ដូច្នេះ :latest មានប្រយោជន៍អ្វីខ្លះ? ឬគួរដកចេញទាំងស្រុងតាម CLAUDE.md? (សម្រេចក្នុង learning-log — អាចដកបានពេលអ្នកជ្រើស)
+          # ► labels: metadata-action បន្ថែម OCI label (org.opencontainers.image.source=repo URL, revision=sha, created) ដោយស្វ័យប្រវត្តិ
+          #   label source នេះធ្វើឱ្យ ghcr ភ្ជាប់ package ទៅ repo → visibility/permission តាម repo
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build                         # ► id ដើម្បី step summary យក outputs.digest
+        with:
+          context: mini-shop             # ► monorepo: build context = folder app (Dockerfile COPY .mvn/, pom.xml, src/ ពីទីនេះ)
+          file: mini-shop/Dockerfile      # ► path ពី root (action មិនស្គាល់ working-directory)
+                                          # ► សេណារីយ៉ូ: context: . → Dockerfile រកមិនឃើញ pom.xml (វានៅ mini-shop/pom.xml) → "COPY failed"
+          push: true                      # ► build រួច push ភ្លាម (PR មិនដល់ job នេះ — មើល if: ខាងលើ)
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha            # ► អ្វី: layer cache ក្នុង GitHub Actions cache (ដូច cache: maven តែសម្រាប់ Docker layer)
+          cache-to: type=gha,mode=max     # ► mode=max: cache គ្រប់ layer រួមទាំង build stage (dependency:go-offline ~1-2 នាទី) មិនមែនតែ final stage
+                                          # ► សេណារីយ៉ូ: run ១ build ពេញ (Maven download ក្នុង container); run ២ កែតែ src/ → layer .mvn/pom/go-offline hit → លឿនច្រើន
+                                          #   វាស់: tracker "build មុន cache: __ ក្រោយ: __"
+                                          # ► សំណួរ: cache: maven (setup-java) និង cache type=gha នេះ ជា cache ២ ផ្សេងគ្នា — ហេតុអ្វី Docker build មិនប្រើ ~/.m2 របស់ runner?
+
+      - name: Image summary
+        run: |
+          {
+            echo "### Image pushed"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo "digest: ${{ steps.build.outputs.digest }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+        # ► អ្វី: សរសេរ tag ទៅ Summary page របស់ run → ចម្លង :<sha> ទៅ compose/K8s បានដោយមិនរក log
+        working-directory: .   # ► override defaults (mini-shop) — step នេះមិនត្រូវការ folder app
+
 # =====================================================================================
 # សំណួរ review សរុប (ឆ្លើយក្នុង docs/learning-log.md)
 #   1. Workflow នេះ run លើ commit ដែលកែតែ docs/*.md ដែរ — ខ្ជះខ្ជាយ ~1 នាទី។ គួរបន្ថែម on.push.paths ឬអត់?
