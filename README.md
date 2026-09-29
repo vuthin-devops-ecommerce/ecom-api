@@ -20,7 +20,8 @@ App ជា modular monolith (`catalog` + `order`) ដែលរៀបចំឱ្
   dependabot.yml          update dependency ដោយ PR (maven, github-actions, docker) — weekly
 docs/
   00-tech-stack.md        source of truth សម្រាប់ version tool
-  phase-*-plan.md         ផែនការ + progress tracker នីមួយៗ
+  phase-*-plan.md         ផែនការ + progress tracker នីមួយៗ (មេរៀន — អ្វីដែលត្រូវធ្វើ)
+  phase-*-worklog.md      កំណត់ហេតុអនុវត្ត — Task នីមួយៗ: ធ្វើអ្វី, file, command, លទ្ធផល/ភស្តុតាង (ចាប់ពី A2)
   decisions/              ADR (001 modular monolith, 002 order schema FK, 003 productId, 004 CI jobs, 005 scan policy)
   runbooks/ci-failure.md  CI ក្រហម → មើលអ្វីតាមលំដាប់ (symptom ពិត + command reproduce)
   learning-log.md         ចម្លើយសំណួរឆ្លុះបញ្ចាំង + រោគសញ្ញាដែលជួបពិត
