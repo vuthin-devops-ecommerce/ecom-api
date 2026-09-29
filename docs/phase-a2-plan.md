@@ -289,7 +289,7 @@ updates:
 | 1 Build + unit test | ✅ | 2026-09-28 | ទី១: 1m09s (cache miss, build step 52s) ទី២: 33s (cache hit, build step 17s) |
 | 2 Integration test | ✅ | 2026-09-28 | សរុប 1m39s · unit-test 42s (cache miss, pom.xml ប្តូរ) · integration-test 51s (cache hit; pull postgres:17 8s, IT 22s) |
 | 3 Image → ghcr.io | ✅ | 2026-09-28 | build មុន cache: 1m32s (go-offline 24s, package 12s, export cache 45s) ក្រោយ: __ · image `mini-shop:1279d03` |
-| 4 Trivy | ⬜ | | CVE រកឃើញ: __ |
+| 4 Trivy | 🟡 | | run ១ (main): CRITICAL 3 (tomcat-embed-core 11.0.24 → fix 11.0.25), alpine 0 → push skipped ✅ gate ពិត · scan 61s (DB+Java DB download) · build CACHED 14s |
 | 5 Protection + badge | ⬜ | | — |
 | 6 Docs | ⬜ | | — |
 
