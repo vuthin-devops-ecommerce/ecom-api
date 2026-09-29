@@ -1,0 +1,18 @@
+# Phase A3 Task 2 — headless Service សម្រាប់ Postgres
+# ► clusterIP: None = "headless": គ្មាន virtual IP/load-balancing; DNS "postgres.minishop.svc" ឆ្លើយ IP របស់ pod ផ្ទាល់
+#   និង StatefulSet ប្រើវាបង្កើត DNS per pod: postgres-0.postgres.minishop.svc
+# ► ហេតុអ្វី StatefulSet ត្រូវការ headless: pod មាន identity (postgres-0) → client ត្រូវការឈ្មោះទៅ pod **ជាក់លាក់** មិនមែន "ណាមួយ"
+#   (Deployment pod ជា cattle → ClusterIP load-balance ទៅណាក៏បាន; DB primary មិនមែន "ណាក៏បាន")
+# ► App (Task 3) ភ្ជាប់ jdbc:postgresql://postgres:5432/minishop — "postgres" = ឈ្មោះ Service នេះ (ដូច "db" ក្នុង compose)
+# ► សំណួរ: replicas: 1 → headless vs ClusterIP ធម្មតាខុសគ្នាអ្វីក្នុងករណីនេះ? ពេលណាភាពខុសគ្នាចាប់ផ្តើមសំខាន់?
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: minishop
+  labels: { app: postgres }
+spec:
+  clusterIP: None
+  selector: { app: postgres }
+  ports:
+    - { name: pg, port: 5432, targetPort: pg }

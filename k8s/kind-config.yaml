@@ -1,0 +1,34 @@
+# Phase A3 Task 1 — kind cluster: 1 control-plane + 2 worker
+# ► អ្វី: kind (Kubernetes IN Docker) run "node" នីមួយៗជា Docker container មួយ — មើល `docker ps` ក្រោយ create
+# ► បង្កើត/លុប:
+#     kind create cluster --name minishop --config k8s/kind-config.yaml
+#     kind delete cluster --name minishop        # លុបទាំងអស់ (PVC ដែរ) — cluster ជា "cattle" មិនមែន "pet"
+# ► Version pin (CLAUDE.md §4 "គ្មាន latest"): kind v0.33.0 · node image kindest/node:v1.37.0 (digest ខាងក្រោម)
+#   — kind នីមួយៗ support node image ជាក់លាក់; image ដែលគ្មាន digest អាចប្តូរ → cluster "ខុសគ្នា" ថ្ងៃក្រោយ
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: minishop                 # ► ឈ្មោះ cluster → kubectl context "kind-minishop"
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+        # ► អ្វី: label node នេះ "ingress-ready=true" — ingress-nginx manifest សម្រាប់ kind មាន nodeSelector ចង្អុលមក label នេះ
+        #   ដូច្នេះ ingress controller pod ត្រូវតែ schedule លើ control-plane (node ដែលមាន port mapping ខាងក្រោម)
+    extraPortMappings:          # ► អ្វី: port 80/443 របស់ container node → localhost:80/443 លើ laptop
+      - containerPort: 80       #   បើគ្មាន: Ingress ដើរក្នុង cluster តែ laptop ចូលមិនដល់ (Docker container គ្មាន port publish)
+        hostPort: 80            #   សេណារីយ៉ូ: port 80 លើ laptop ជាប់ (IIS/other) → kind create ខូច → ប្តូរ hostPort: 8081 + curl :8081
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+  - role: worker
+    image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+# ► សំណួរ: ហេតុអ្វី 2 worker មិនមែន 1? (hint: Task 5 self-healing — pod ២ replica លើ node ខុសគ្នា; Task 2 PVC ជាប់ node ណា?)
+# ► សំណួរ: worker ក៏ run លើ laptop ដដែល — "node ច្រើន" ជា simulation; production ខុសអ្វី? (network, disk, failure ពិត)

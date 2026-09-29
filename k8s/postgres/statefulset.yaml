@@ -1,0 +1,52 @@
+# Phase A3 Task 2 — Postgres ជា StatefulSet (ADR-006: ហេតុអ្វីមិនមែន Deployment, ហើយ production គួរ managed DB ឬអត់)
+# ► StatefulSet ផ្តល់ ៣ យ៉ាងដែល Deployment គ្មាន: (1) ឈ្មោះ pod ស្ថិរ "postgres-0" (2) DNS ស្ថិរ postgres-0.postgres.minishop.svc
+#   (3) PVC មួយ per pod ដែល**រស់**ទោះ pod ងាប់ ឬ StatefulSet ត្រូវលុប (volumeClaimTemplates)
+# ► សេណារីយ៉ូ (លំហាត់ ១): kubectl delete pod postgres-0 → pod ថ្មីឈ្មោះ postgres-0 ដដែល, mount PVC ដដែល → data នៅ
+# ► សេណារីយ៉ូ (លំហាត់ ២): kubectl delete statefulset postgres → PVC "data-postgres-0" នៅ (K8s មិនហ៊ានលុប data) → create ម្តងទៀត = data ត្រឡប់
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: minishop
+  labels: { app: postgres }
+spec:
+  serviceName: postgres          # ► ត្រូវស្មើឈ្មោះ headless Service (service.yaml) — StatefulSet ប្រើវាបង្កើត DNS per pod
+  replicas: 1                    # ► DB តែ ១ — replica 2 មិនមែន "HA" (Postgres ត្រូវការ streaming replication/operator) → ADR-006
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17     # ► 00-tech-stack ឈ្នះ (plan ធ្លាប់សរសេរ 16-alpine); ដដែលនឹង compose + Testcontainers
+          ports:
+            - { containerPort: 5432, name: pg }
+          envFrom:
+            - configMapRef: { name: postgres-config }   # POSTGRES_DB, POSTGRES_USER, PGDATA
+            - secretRef: { name: postgres-secret }      # POSTGRES_PASSWORD (secret.yaml — gitignored)
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data       # ► PGDATA = …/data/pgdata (configmap) — subfolder ក្នុង mount
+          readinessProbe:        # ► "ready" = ទទួល connection បាន → Service ផ្ញើ traffic; app (Task 3) មិនគួរ start មុននេះ
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:         # ► "alive" = process ឆ្លើយ; fail → kubelet restart container (ប្រយ័ត្ន: DB restart = connection ទាំងអស់ដាច់)
+            exec:
+              command: ["sh", "-c", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }      # ► scheduler ប្រើ requests រក node; kind node ចែក CPU laptop
+            limits: { memory: 256Mi }                   # ► memory limit = OOMKilled បើលើស; CPU limit មិនកំណត់ (សំណួរ Task 3)
+  volumeClaimTemplates:          # ► StatefulSet-only: PVC ឈ្មោះ data-postgres-0 បង្កើតដោយស្វ័យប្រវត្តិ, រស់ក្រោយ pod/STS លុប
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]                    # ► mount បាន ១ node ក្នុងពេលតែមួយ — pod ជាប់ node ដែល PV នៅ (kind: local-path)
+        resources: { requests: { storage: 1Gi } }
+        # ► storageClassName មិនកំណត់ → default របស់ kind = "standard" (rancher local-path) — disk នៅក្នុង node container
+        #   សេណារីយ៉ូ: kind delete cluster → node container លុប → PV បាត់ → data បាត់ (cluster = cattle; data ពិត = ក្រៅ cluster, ADR-006)

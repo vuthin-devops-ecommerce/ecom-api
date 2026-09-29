@@ -1,0 +1,4 @@
+
+### Phase A3 (CLAUDE.md §4 — no secrets in git) ###
+k8s/**/secret.yaml
+!k8s/**/secret.example.yaml
