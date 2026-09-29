@@ -1,0 +1,14 @@
+# Phase A3 Task 2 — config មិនសម្ងាត់របស់ Postgres (ដូច environment: ក្នុង compose.yaml លើកលែង password)
+# ► អ្វី: key/value ធម្មតា → ចូល container ជា env var តាម envFrom (statefulset.yaml)
+# ► សេណារីយ៉ូ: ប្តូរ POSTGRES_DB ទីនេះ → pod ដែលកំពុង run **មិន**ឃើញ (env var អានពេល start) → ត្រូវ restart pod
+#   (Task 3 app ក៏ដូចគ្នា — ConfigMap ប្តូរ ≠ rollout; Kustomize configMapGenerator + hash suffix ដោះស្រាយ Task 6)
+# ► សំណួរ: ហេតុអ្វី password មិននៅទីនេះ? ConfigMap និង Secret ខុសគ្នាអ្វី "ពិត" ក្នុង K8s? (hint: base64 មិនមែន encryption; RBAC, encryption at rest)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: minishop
+data:
+  POSTGRES_DB: minishop
+  POSTGRES_USER: minishop
+  PGDATA: /var/lib/postgresql/data/pgdata   # ► postgres image ណែនាំ subfolder ពេល mount volume (mount root មាន lost+found → initdb ខូច)

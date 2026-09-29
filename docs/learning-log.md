@@ -533,3 +533,35 @@ _(សរសេរនៅទីនេះ)_
 - **ingress-nginx pod `ErrImagePull`** — `describe pod` → Events: `tls: failed to verify certificate: x509: certificate signed by unknown authority` ពេល pull `registry.k8s.io/ingress-nginx/...`។ មូលហេតុដដែលនឹង A2 Task 4: kind node = Linux container → containerd មិនទុកចិត្ត Somansa CA (network ការិយាល័យ)។ Docker Desktop pull node image បាន (Windows trust) តែ **pull ក្នុង node** ខុសផ្លូវ។ ដំណោះស្រាយ: export CA ពី Windows cert store (PowerShell) → `scripts/kind-trust-ca.sh <pem> minishop` (docker cp → `update-ca-certificates` → restart containerd លើ node ទាំង ៣) → pod retry ខ្លួនឯង → Running។ **ត្រូវ run ម្តងទៀតរាល់ `kind create`**។ CA មិន commit; script commit (generic)។
 - **Controller schedule លើ `minishop-worker2` មិនមែន control-plane** — manifest `controller-v1.15.1` provider/kind មាន `nodeSelector: kubernetes.io/os: linux` ប៉ុណ្ណោះ (version ចាស់មាន `ingress-ready: "true"`) → hostPort 80 បើកលើ worker2 ដែលគ្មាន `extraPortMappings` → laptop ចូលមិនដល់។ ដោះស្រាយ: `kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type=merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/os":"linux","ingress-ready":"true"}}}}}'` (toleration control-plane មានស្រាប់) → pod ថ្មីលើ control-plane → `curl localhost` = 404 ពី nginx (ត្រឹមត្រូវ — មិនទាន់មាន Ingress rule)។ Task 6 (Kustomize) គួរដាក់ patch នេះជា file ជំនួស command ដោយដៃ។
   - សំណួរ: ហេតុអ្វី label `ingress-ready` ក្នុង kind-config នៅតែសំខាន់ទោះ manifest មិនប្រើ? ជម្រើសផ្សេង: `extraPortMappings` លើ worker ទាំង ២? បញ្ហាអ្វី?
+
+## Phase A3 / Task 2 — Namespace + Postgres StatefulSet (2026-09-29)
+
+File: `k8s/namespace.yaml`, `k8s/postgres/{configmap,secret.example,statefulset,service}.yaml` (comment ពន្យល់ក្នុង file), ADR: `docs/decisions/006-postgres-statefulset-vs-managed.md` (Proposed)។
+Apply: `kubectl apply -f k8s/namespace.yaml && kubectl apply -f k8s/postgres/` → `postgres-0` Running 1/1 លើ `minishop-worker2`, PVC `data-postgres-0` Bound 1Gi (StorageClass `standard` = local-path ក្នុង node), `psql \l` ឃើញ DB `minishop`។
+
+### លំហាត់ (អ្នកធ្វើ — កត់លទ្ធផលពិត)
+
+1. `kubectl -n minishop delete pod postgres-0` → `kubectl -n minishop get pods -w` → pod ថ្មីឈ្មោះអ្វី? ចំណាយប៉ុន្មានវិនាទី? ទិន្នន័យនៅឬបាត់? (បង្កើត table មុន: `kubectl -n minishop exec postgres-0 -- psql -U minishop -d minishop -c 'create table t(x int); insert into t values (1);'` រួច delete pod រួច `select * from t`)
+
+   _(សរសេរនៅទីនេះ)_
+
+2. `kubectl -n minishop delete statefulset postgres` → `kubectl -n minishop get pvc` → PVC នៅឬបាត់? ហេតុអ្វី K8s **មិន**លុប? រួច `kubectl apply -f k8s/postgres/` → data ត្រឡប់?
+
+   _(សរសេរនៅទីនេះ)_
+
+### សំណួរឆ្លុះបញ្ចាំង (ADR-006 — ឆ្លើយរួចប្តូរ status)
+
+1. ហេតុអ្វី DB ជា StatefulSet មិនមែន Deployment? (identity, DNS, PVC per pod)
+2. Production ពិត: Postgres ក្នុង K8s (StatefulSet/operator) ឬ managed DB (RDS/Cloud SQL)? trade-off (backup, failover, upgrade, cost, "អ្នកណាភ្ញាក់ពេល ២ យប់")។
+3. (ពី service.yaml) headless Service vs ClusterIP ពេល replicas: 1 — ខុសគ្នាអ្វី? ពេលណាសំខាន់?
+4. (ពី configmap.yaml) ConfigMap vs Secret — base64 មិនមែន encryption; អ្វី**ពិត**ដែលធ្វើឱ្យ Secret "សុវត្ថិភាពជាង"?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 2
+
+- `kubectl apply -f k8s/postgres/` apply **ទាំង** `secret.example.yaml` និង `secret.yaml` (ឈ្មោះ object ដដែល `postgres-secret`) → log "created" រួច "configured" — file ក្រោយឈ្នះ (លំដាប់ alphabet: secret.example < secret.yaml → password ពិតឈ្នះ, តែដោយសំណាង)។ Task 6 Kustomize រាយ resource ជាក់លាក់ → បញ្ហានេះបាត់។
+- PVC Bound ភ្លាមទោះ StorageClass local-path: PV បង្កើតពេល pod schedule (WaitForFirstConsumer) → PV ជាប់នឹង node `worker2` → pod postgres-0 នឹង**តែងតែ**ទៅ worker2 (RWO + local disk)។ សេណារីយ៉ូ: worker2 ងាប់ → pod Pending រហូត — នេះជាហេតុផលមួយក្នុង ADR-006។
+- **លំហាត់ ១–២ (ភស្តុតាងពី cluster, 2026-09-29):** ក្រោយ delete pod + delete/apply StatefulSet — pod ឈ្មោះ `postgres-0` ដដែល (age ថ្មី), PVC `data-postgres-0` **UID ដដែល** `pvc-3ec56de9…` (មិនបានបង្កើតថ្មី), `select count(*) from t` = 1 → data រស់ទាំង ២ ករណី។ ចម្លើយ "ហេតុអ្វី" នៅជារបស់អ្នក (ខាងលើ)។

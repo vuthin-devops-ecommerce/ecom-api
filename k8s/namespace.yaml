@@ -1,0 +1,10 @@
+# Phase A3 Task 2 — namespace "minishop": ព្រំដែន logic សម្រាប់ object ទាំងអស់របស់ app
+# ► អ្វី: ដូច "folder" ក្នុង cluster — Service DNS = <service>.<namespace>.svc, RBAC/quota កំណត់តាម namespace
+# ► សេណារីយ៉ូ: បើគ្មាន → object ទៅ "default" លាយជាមួយអ្វីផ្សេង; លុប app = លុប ១ ដុំៗ។ មាន → `kubectl delete ns minishop` លុបទាំងអស់ (រួមទាំង PVC!)
+# ► ingress-nginx នៅ namespace ខ្លួនឯង (ingress-nginx) — platform vs app (ADR-008 ព្រំដែនស្រទាប់)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minishop
+  labels:
+    app.kubernetes.io/part-of: minishop
