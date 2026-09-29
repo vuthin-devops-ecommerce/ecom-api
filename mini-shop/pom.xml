@@ -33,6 +33,11 @@
 		     surefire has no built-in "skip unit tests only" property (skipTests skips failsafe too),
 		     so we define our own and wire it into surefire below. Default false = laptop runs everything. -->
 		<skipUnitTests>false</skipUnitTests>
+		<!-- Phase A2 Task 4 (2026-09-29): Trivy found CVE-2026-65182/-65905/-68525 (CRITICAL) in
+		     tomcat-embed-core 11.0.24 managed by Spring Boot 4.1.1. Fixed in 11.0.25. Overriding the
+		     BOM property upgrades all tomcat-embed-* artifacts together. Remove once a Boot patch
+		     release manages >= 11.0.25 (Dependabot, Task 5). -->
+		<tomcat.version>11.0.25</tomcat.version>
 	</properties>
 	<dependencies>
 		<dependency>
