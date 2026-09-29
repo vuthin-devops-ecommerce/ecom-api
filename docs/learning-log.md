@@ -357,12 +357,58 @@ _(សរសេរនៅទីនេះ)_
 
 ### លំហាត់ — វាស់
 
-- Docker build run ១ (cache miss): ______ · run ២ (កែតែ src/): ______ · layer ណា hit / miss?
+- Docker build run ១ (cache miss, run 36391399001): step build-push 1m32s — pull base image 3–6s · `dependency:go-offline` 24s · `package` 12s · push manifest 8s · **export cache (mode=max) 45s** · run ២ (កែតែ src/): ______ · layer ណា hit / miss? ______
+- Image push រួច: `ghcr.io/vuthin-devops-ecommerce/mini-shop:1279d03` និង `:latest`, digest `sha256:60c29aae…` (tag ២ ចង្អុលទៅ digest តែមួយ)
 - Image size (`docker images`): ______ MB — ធៀបនឹង `mini-shop:local` ពី Phase A?
 
 ### អ្វីដែលជួបពិតពេលធ្វើ Task 3
 
 - **Run ដំបូងលើ `main` ធ្លាក់ក្នុង 1s** (run 36386015912): `ERROR: invalid tag "ghcr.io/.../mini-shop:-tag-short-git-sha-7-.-dd44792-immutable-sha-image-56abbbb": invalid reference format`។ មូលហេតុ: comment `# ...` ដែលដាក់នៅចុងបន្ទាត់**ក្នុង** YAML block scalar (`tags: |`) មិនមែន comment ទេ — វាជាអត្ថបទ → metadata-action យកវាចូល tag។ លំដាប់រកឃើញ: job → step ណាក្រហម (build-push, 1s = មិនទាន់ build) → log បន្ទាត់ `docker buildx build ... --tag` ឃើញ tag ចម្លែក → ថយក្រោយទៅ YAML។ actionlint មិនចាប់។ កែ: ដក comment ចេញពី block ដាក់ខាងលើ។
 - PR run (36385865494): job `docker` = skipped ✅ (`if:` ដំណើរការ)។ Commit ដដែលបាន run ២ ដង (event `push` លើ develop + `pull_request`) — concurrency group ខុសគ្នា (`refs/heads/develop` vs `refs/pull/2/merge`) ដូច្នេះមិន cancel គ្នា → ចម្លើយសំណួរ Task 1 "run ២ ដងឬ?" = បាទ។
+
+_(សរសេរនៅទីនេះ)_
+
+---
+
+## Phase A2 / Task 4 — Security scan ជាមួយ Trivy (2026-09-29)
+
+File: `.github/workflows/ci.yml` job `docker` (build load → Trivy CRITICAL block → Trivy HIGH report → push), ADR: `docs/decisions/005-security-scan-policy.md`
+
+### ជម្រើសរចនា (ពី `phase-a2-plan.md` Task 4 — ADR-005 ស្នើរួច, អ្នកសម្រេច)
+
+| សំណួរ | ADR-005 ស្នើ | អ្នកយល់ស្រប? ហេតុអ្វី? |
+|---|---|---|
+| Scan មុន push ឬក្រោយ push? | មុន (`load: true` → scan → `push: true`) | _(សរសេរ)_ |
+| `CRITICAL` ប៉ុណ្ណោះ ឬ `CRITICAL,HIGH`? | CRITICAL block, HIGH report-only | _(សរសេរ)_ |
+| `ignore-unfixed: true` មានន័យអ្វី? ហេតុអ្វីសមហេតុផល? | true | _(សរសេរ)_ |
+
+សំណួរ ៣ ចុង ADR-005 → ចម្លើយ:
+
+_(សរសេរនៅទីនេះ)_
+
+### សំណួរ review ក្នុង `ci.yml` (Task 4)
+
+1. `load: true` ជំនួស `push: true` ក្នុង step build ដំបូង — image ទៅណា? ហេតុអ្វី Trivy ត្រូវការវានៅទីនោះ?
+2. Step push ចុងក្រោយ build "ម្តងទៀត" — ហេតុអ្វីវាចំណាយតែប៉ុន្មានវិនាទី? (មើល log: `CACHED` គ្រប់ layer?)
+3. Step scan ធ្លាក់ → step push កើតអ្វី? (default behaviour របស់ step ពេល step មុន fail — ខុសពី `if: always()` យ៉ាងណា?)
+4. `exit-code: "0"` លើ step HIGH — បើគ្មាននរណាអាន log តើ step នេះមានប្រយោជន៍អ្វី? អ្នកនឹងអានវាពេលណា?
+
+### លំហាត់ — វាស់
+
+- Run ដំបូងជាមួយ Trivy: CRITICAL ______ · HIGH ______ · ពេល step scan ______ · ពេល job `docker` សរុប ______
+- លំហាត់ base image: ប្តូរ `eclipse-temurin:21-jre-alpine` → `eclipse-temurin:17-jre` (Debian, គ្មាន alpine) ក្នុង Dockerfile → push (branch ណាក៏បាន? — មិនទេ: job docker run តែលើ main → ត្រូវ PR+merge, ឬ run Trivy លើ laptop ជំនួស):
+  ```bash
+  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.1 image --severity CRITICAL,HIGH --ignore-unfixed ghcr.io/vuthin-devops-ecommerce/mini-shop:1279d03
+  ```
+  លទ្ធផលពិត 2026-09-29 (Trivy 0.74.0 លើ Windows, scan base image ផ្ទាល់ ព្រោះ build local ធ្វើមិនបាន — មើលខាងក្រោម):
+  - `eclipse-temurin:21-jre-alpine` (287MB): **0** CVE (គ្រប់ severity, ទោះមិន ignore-unfixed)
+  - `eclipse-temurin:17-jre` (ubuntu 26.04, 430MB): **42** CVE — LOW 4, MEDIUM 38, HIGH 0, CRITICAL 0 — **ទាំង 42 unfixed** → ជាមួយ `--ignore-unfixed` = 0
+  - ហេតុអ្វី alpine 0 តែ ubuntu 42? ហេតុអ្វី gate `CRITICAL` + `ignore-unfixed` ឱ្យលទ្ធផលដូចគ្នាទាំង ២? _(សរសេរ)_
+- Trivy លើ laptop vs CI: លទ្ធផលដូចគ្នាឬអត់? បើខុស ហេតុអ្វី? (hint: CVE database date)
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 4
+
+- **`docker build` លើ laptop ធ្លាក់** នៅ `[builder 5/7] ./mvnw dependency:go-offline`: `wget: Failed to fetch .../apache-maven-3.9.16-bin.tar.gz` ក្នុង 0.3s។ លំដាប់ debug: Dockerfile ដដែល build បានក្នុង CI → បញ្ហា environment មិនមែន code → run `eclipse-temurin:21-jdk` ដោយដៃ: DNS ✅, `wget --spider https://repo.maven.apache.org` → **`The certificate of repo.maven.apache.org is not trusted`** → `openssl s_client` → issuer `C=KR, O=Somansa, CN=Somansa Root CA`។ សន្និដ្ឋាន: network ការិយាល័យមាន TLS interception; Windows ទុកចិត្ត CA នោះ តែ Linux container មិនស្គាល់។ ដូចគ្នានឹង `curl: (35) schannel` ពី Task 0។ **មិនកែ Dockerfile** (CA របស់ក្រុមហ៊ុនមិនមែនរបស់ project) — build ធ្វើក្នុង CI, laptop ប្រើ Windows-native tool។
+- Trivy ក្នុង container (`aquasec/trivy`) ក៏នឹងជួបបញ្ហាដដែល (download DB ពី ghcr.io) → តម្លើង Trivy 0.74.0 Windows ផ្ទាល់នៅ `C:/Users/user/tools/trivy/trivy.exe` (Go ប្រើ Windows cert store → ដើរបាន)។ សំណួរ: CI runner មិនមានបញ្ហានេះ — តើនេះជាហេតុផលមួយដែល "build លើ CI មិនមែន laptop" សំខាន់?
 
 _(សរសេរនៅទីនេះ)_
