@@ -1,23 +1,28 @@
 # DevOps-Journey
 
+[![CI](https://github.com/vuthin-devops-ecommerce/ecom-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vuthin-devops-ecommerce/ecom-api/actions/workflows/ci.yml)
+
 ដំណើររៀន DevOps ជាជំហាន — monorepo មាន **ឯកសារ** (`docs/`) និង **app** (`mini-shop/`, Spring Boot)។
 App ជា modular monolith (`catalog` + `order`) ដែលរៀបចំឱ្យបំបែកជា service ដាច់នៅ Phase B។
 
 | Phase | ខ្លឹមសារ | ស្ថានភាព |
 |---|---|---|
 | A | modular monolith, Flyway, Testcontainers, Docker Compose | ✅ (`docs/phase-a-plan.md`) |
-| A2 | GitHub Actions CI, Trivy, ghcr.io | ⬜ |
+| A2 | GitHub Actions CI, Trivy, ghcr.io | 🟡 Task 0–4 ✅ (`docs/phase-a2-plan.md`) |
 | A3 | Kubernetes (kind), probes, rolling update, HPA | ⬜ |
 | A4 | Terraform | ⬜ |
 
 ## រចនាសម្ព័ន្ធ
 
 ```
+.github/
+  workflows/ci.yml        CI: unit-test → integration-test → docker (build · Trivy · push ghcr.io, main ប៉ុណ្ណោះ)
+  dependabot.yml          update dependency ដោយ PR (maven, github-actions, docker) — weekly
 docs/
   00-tech-stack.md        source of truth សម្រាប់ version tool
   phase-*-plan.md         ផែនការ + progress tracker នីមួយៗ
-  decisions/              ADR (001 modular monolith, 002 order schema FK, 003 productId)
-  learning-log.md         ចម្លើយសំណួរឆ្លុះបញ្ចាំង
+  decisions/              ADR (001 modular monolith, 002 order schema FK, 003 productId, 004 CI jobs, 005 scan policy)
+  learning-log.md         ចម្លើយសំណួរឆ្លុះបញ្ចាំង + រោគសញ្ញាដែលជួបពិត
 mini-shop/                Spring Boot 4.1 · Java 21 · Maven wrapper · PostgreSQL 17 · Flyway
 ```
 
@@ -85,10 +90,28 @@ Error ឆ្លើយជា [RFC 9457 ProblemDetail](https://www.rfc-editor.org/
 
 ```bash
 cd mini-shop
-./mvnw test                  # unit (Mockito)
-./mvnw verify                # + integration (*IT, Testcontainers postgres:17 — ត្រូវការ Docker)
-./mvnw verify -DskipITs      # unit ប៉ុណ្ណោះ
+./mvnw test                      # unit (Mockito) — CI job unit-test
+./mvnw verify                    # + integration (*IT, Testcontainers postgres:17 — ត្រូវការ Docker)
+./mvnw verify -DskipITs          # unit ប៉ុណ្ណោះ
+./mvnw verify -DskipUnitTests    # integration ប៉ុណ្ណោះ — CI job integration-test (property ក្នុង pom.xml)
 ```
+
+## Development workflow (Phase A2)
+
+```
+branch feature/develop ──push──▶ CI: unit-test → integration-test          (~2 នាទី, docker skipped)
+        │
+        └─ PR → main ──merge──▶ CI: unit-test → integration-test → docker
+                                  build (cache gha) → Trivy CRITICAL gate → Trivy HIGH report → push
+                                  ghcr.io/vuthin-devops-ecommerce/mini-shop:<short-sha> + :latest
+```
+
+- `develop` សម្រាប់ធ្វើការ, `main` = release ប៉ុណ្ណោះ — image push **តែ**ពេល push ទៅ `main`
+- CI ក្រហម → មើលឈ្មោះ job មុន: `unit-test` = logic · `integration-test` = DB/HTTP/schema · `docker` = build/CVE (runbook `docs/runbooks/ci-failure.md`, Task 6)
+- Trivy block តែ CRITICAL ដែលមាន fix (ADR-005) → ដោះស្រាយដោយ upgrade dependency (ឧ. `tomcat.version` ក្នុង `pom.xml`) មិនមែនបិទ scan
+- Deploy ប្រើ `:<short-sha>` ជានិច្ច — `:latest` មានតែសម្រាប់មើល build ចុងក្រោយ (CLAUDE.md §4)
+- Pull image (package private): `echo <PAT read:packages> | docker login ghcr.io -u <user> --password-stdin`
+- Branch protection លើ `main` (require PR + status check): ត្រូវការ repo public ឬ GitHub Pro — មើល `docs/phase-a2-plan.md` Task 5
 
 ## ច្បាប់សំខាន់ (ពី `CLAUDE.md`)
 
