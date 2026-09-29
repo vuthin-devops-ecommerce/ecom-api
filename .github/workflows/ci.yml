@@ -196,20 +196,63 @@ jobs:
           # ► labels: metadata-action បន្ថែម OCI label (org.opencontainers.image.source=repo URL, revision=sha, created) ដោយស្វ័យប្រវត្តិ
           #   label source នេះធ្វើឱ្យ ghcr ភ្ជាប់ package ទៅ repo → visibility/permission តាម repo
 
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        id: build                         # ► id ដើម្បី step summary យក outputs.digest
+      # ---------------------------------------------------------------------------
+      # Task 4: លំដាប់ build → scan → push (scan "មុន" push — ADR-005)
+      # ► សេណារីយ៉ូ: image មាន CRITICAL CVE → step scan ធ្លាក់ → step push មិនដល់ → registry គ្មាន image អាក្រក់
+      #   ជម្រើសផ្ទុយ (scan ក្រោយ push): registry មាន image រួច ទោះ pipeline ក្រហម → អ្នកណាក៏ pull :latest បាន
+      # ---------------------------------------------------------------------------
+      - name: Build image (load to Docker daemon, no push)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: mini-shop             # ► monorepo: build context = folder app (Dockerfile COPY .mvn/, pom.xml, src/ ពីទីនេះ)
+          context: mini-shop              # ► monorepo: build context = folder app (Dockerfile COPY .mvn/, pom.xml, src/ ពីទីនេះ)
           file: mini-shop/Dockerfile      # ► path ពី root (action មិនស្គាល់ working-directory)
                                           # ► សេណារីយ៉ូ: context: . → Dockerfile រកមិនឃើញ pom.xml (វានៅ mini-shop/pom.xml) → "COPY failed"
-          push: true                      # ► build រួច push ភ្លាម (PR មិនដល់ job នេះ — មើល if: ខាងលើ)
+          load: true                      # ► អ្វី: export image ចូល Docker daemon របស់ runner (ដើម្បី Trivy scan បាន) — មិន push
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha            # ► អ្វី: layer cache ក្នុង GitHub Actions cache (ដូច cache: maven តែសម្រាប់ Docker layer)
-          cache-to: type=gha,mode=max     # ► mode=max: cache គ្រប់ layer រួមទាំង build stage (dependency:go-offline ~1-2 នាទី) មិនមែនតែ final stage
-                                          # ► សេណារីយ៉ូ: run ១ build ពេញ (Maven download ក្នុង container); run ២ កែតែ src/ → layer .mvn/pom/go-offline hit → លឿនច្រើន
-                                          #   វាស់: tracker "build មុន cache: __ ក្រោយ: __"
+          cache-to: type=gha,mode=max     # ► mode=max: cache គ្រប់ layer រួមទាំង build stage (go-offline 24s) — វាស់ពិត: export 45s ក្នុង run ១
+                                          # ► សេណារីយ៉ូ: run ២ កែតែ src/ → layer .mvn/pom/go-offline CACHED → សន្សំ ~24s; បើ export នៅតែ 45s រាល់ run → ពិចារណា mode=min
                                           # ► សំណួរ: cache: maven (setup-java) និង cache type=gha នេះ ជា cache ២ ផ្សេងគ្នា — ហេតុអ្វី Docker build មិនប្រើ ~/.m2 របស់ runner?
+
+      - name: Scan image with Trivy (CRITICAL blocks)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        # ► អ្វី: Trivy ស្កេន OS package (alpine apk) + Java dependency (jar ក្នុង app.jar) ធៀបនឹង CVE database
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/mini-shop:${{ steps.meta.outputs.version }}
+                                          # ► outputs.version = tag ដែលមាន priority ខ្ពស់បំផុត: type=raw (200) > type=sha (100) → "latest"
+                                          #   image ក្នុង daemon មាន tag ទាំង ២ (:<sha> និង :latest) ចង្អុលទៅ image ដដែល — scan មួយណាក៏ដូចគ្នា; មិនមែនពី registry
+          format: table                   # ► អានបានក្នុង log; ជម្រើសផ្សេង: sarif → GitHub Security tab (ត្រូវការ security-events: write)
+          exit-code: "1"                  # ► អ្វី: រកឃើញ CVE ត្រូវលក្ខខណ្ឌ → step ធ្លាក់ → job ក្រហម → step push មិនដល់
+                                          # ► សេណារីយ៉ូ: exit-code "0" = "report only" — pipeline បៃតងជានិច្ច, គ្មាននរណាអាន → គ្មានប្រយោជន៍
+          severity: CRITICAL              # ► ADR-005: ចាប់ផ្តើមតឹងតែលើ CRITICAL; HIGH ជា report មិនទាន់ block (step បន្ទាប់)
+                                          # ► សេណារីយ៉ូ: CRITICAL,HIGH ពីដំបូង → base image ថ្មីៗក៏អាចមាន HIGH → pipeline ក្រហមញឹក → មនុស្សចាប់ផ្តើមមិនអើពើ
+          ignore-unfixed: true            # ► អ្វី: មិនរាប់ CVE ដែល upstream មិនទាន់មាន fix (គ្មាន version ថ្មីឱ្យ upgrade)
+                                          # ► សេណារីយ៉ូ: false → CVE ដែលអ្នកធ្វើអ្វីមិនបាន block release រហូតដល់ Alpine/Temurin ចេញ patch
+                                          # ► សំណួរ: "ignore" មានន័យថា CVE នោះមិនគ្រោះថ្នាក់ឬ? អ្នកគួរតាមដានវាដោយរបៀបណា?
+
+      - name: Trivy report HIGH (report only, never fails)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/mini-shop:${{ steps.meta.outputs.version }}
+          format: table
+          exit-code: "0"                  # ► report ប៉ុណ្ណោះ — ឃើញចំនួន HIGH ក្នុង log ដើម្បីសម្រេចថាពេលណាតឹងទៅ CRITICAL,HIGH (ADR-005 review)
+          severity: HIGH
+          ignore-unfixed: true
+          skip-setup-trivy: true          # ► Trivy binary តម្លើងរួចពី step មុន — មិន download ម្តងទៀត
+        # ► លំហាត់ Task 4: ប្តូរ base image ទៅ eclipse-temurin:17-jre (គ្មាន alpine) → CVE ខុសគ្នាប៉ុន្មាន? កត់ក្នុង tracker
+
+      - name: Push image (only after scan passed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build                         # ► id ដើម្បី step summary យក outputs.digest
+        with:
+          context: mini-shop
+          file: mini-shop/Dockerfile
+          push: true                      # ► build ម្តងទៀត? ទេ — layer ទាំងអស់ CACHED ក្នុង builder ដដែល (~វិនាទី) → push ប៉ុណ្ណោះ
+                                          # ► សេណារីយ៉ូ: step scan ធ្លាក់ → step នេះមិន run (default: step run តែពេល step មុនទាំងអស់ success)
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
 
       - name: Image summary
         run: |
