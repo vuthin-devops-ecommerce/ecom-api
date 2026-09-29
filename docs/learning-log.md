@@ -416,3 +416,40 @@ _(សរសេរនៅទីនេះ)_
 - Build step (load) 14s — cache gha hit ទាំងអស់ (run មុន 1m32s) ✅។ Scan 61s: Trivy download vuln DB + Java DB (រាល់ run, runner ថ្មី) — ចំណាយសំខាន់ជាង scan ខ្លួនឯង។
 - **ការសម្រេចចិត្តកែ:** ADR-005 block តែ CVE ដែលមាន fix → ត្រូវ upgrade មិនមែន ignore។ Spring Boot 4.1.1 គ្រប់គ្រង Tomcat 11.0.24 → override property `<tomcat.version>11.0.25</tomcat.version>` ក្នុង `pom.xml` (Boot BOM ប្រើ property នេះ — patch version តែប៉ុណ្ណោះ, មិនមែន major upgrade → គ្មាន ADR ថ្មី តាម CLAUDE.md §3)។ ជម្រើសផ្សេង: upgrade Spring Boot 4.1.x ថ្មីដែលមាន Tomcat 11.0.25 (បើមាន) — ធំជាង, ធ្វើពេល Dependabot ស្នើ (Task 5)។
   - សំណួរ: ហេតុអ្វី override property ល្អជាង `<dependency>` tomcat-embed-core ផ្ទាល់ក្នុង pom? (hint: tomcat-embed-el, tomcat-embed-websocket ត្រូវ version ដូចគ្នា)
+- **Run ២ លើ `main` ក្រោយ fix (run 36511263071) — gate ឆ្លង, image push:** scan CRITICAL `Total: 0` → step HIGH report `Total: 2 (HIGH: 2)` — `com.fasterxml.jackson.core:jackson-databind 2.21.5` (fixed 2.21.6) — **មិន block** (report-only តាម ADR-005) → step push run 7s (layer CACHED ទាំងអស់) → image ថ្មីលើ ghcr.io។ Build step 1m56s (cache miss ព្រោះ `pom.xml` ប្តូរ → layer `go-offline` rebuild + export 45s)។
+- Trivy DB cache: `Cache not found for input keys: cache-trivy-2026-09-29` ទាំង ២ step (key តាមថ្ងៃ, save ក្រោយ job) → run ក្រោយក្នុងថ្ងៃដដែលគួរ hit។ Trivy binary cache hit (v0.70.0 — action pin v0.36.0 ប្រើ Trivy 0.70, laptop 0.74 — version ខុសគ្នា, database ដូចគ្នា)។
+- សំណួរ Task 6 / review date ADR-005: HIGH 2 ក្នុង jackson-databind មាន fix — ទុកឱ្យ Dependabot (Task 5) ស្នើ ឬ override ដូច Tomcat? អ្វីជាលក្ខណៈវិនិច្ឆ័យ? (hint: CVSS, exploitability, ថាតើ app ប្រើ feature នោះ)
+
+---
+
+## Phase A2 / Task 5 — Branch protection + badge + Dependabot (2026-09-29)
+
+File: `README.md` (badge, Development workflow), `.github/dependabot.yml`
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 5
+
+- **Branch protection API → 403** `Upgrade to GitHub Pro or make this repository public to enable this feature.` — ទាំង classic branch protection និង repository ruleset។ Repo `ecom-api` private, org plan `free`។ GitHub: protected branch/ruleset មានសម្រាប់ repo **public** លើ Free; repo private ត្រូវការ Pro/Team។
+- **ការសម្រេចចិត្តរបស់អ្នក (មិនមែន Claude):** ជម្រើស (ក) ធ្វើ repo public — code រៀន, គ្មាន secret ក្នុង git (CLAUDE.md §4 ធានា) → protection ដើរបាន, ghcr package អាចនៅ private ដដែល; (ខ) នៅ private, រំលង protection, រក្សាវិន័យ "PR ជានិច្ច" ដោយខ្លួនឯង (CI នៅតែ run លើ PR តែ merge button មិន disabled); (គ) GitHub Pro។ **សម្រេច 2026-09-29: (ក) public** — `gh repo edit --visibility public` → protection apply បាន: require PR (0 approval — solo), status check `unit-test` + `integration-test`, `enforce_admins: true` (owner ក៏ bypass មិនបាន), no force-push, no delete។ `strict: false` ដោយចេតនា: ជាមួយ merge commit `develop → main`, `main` មាន commit ដែល `develop` គ្មាន → `strict: true` នឹងទាមទារ merge `main` ចូល `develop` មុនរាល់ PR — friction ដោយគ្មានតម្លៃសម្រាប់ solo dev (សំណួរ ១ ខាងក្រោម)។ ហេតុផលរបស់អ្នក:
+
+  _(សរសេរនៅទីនេះ)_
+
+- `dependabot.yml`: ផែនការសរសេរ `directory: /` សម្រាប់ maven/docker — ខុសសម្រាប់ monorepo នេះ (`pom.xml`, `Dockerfile` នៅ `mini-shop/`) → `/mini-shop`; github-actions នៅ root ត្រឹមត្រូវ។ បន្ថែម `ignore: semver-major` សម្រាប់ Spring Boot, eclipse-temurin, postgres (major = ADR មិនមែន PR bot, CLAUDE.md §3)។
+
+### សំណួរឆ្លុះបញ្ចាំង / លំហាត់ (ពី `phase-a2-plan.md` Task 5)
+
+| លំហាត់ | លទ្ធផល |
+|---|---|
+| សាក push ផ្ទាល់ទៅ `main` → ត្រូវបានបដិសេធ? | _(បើ protection បើក: `git push origin develop:main` → error "protected branch")_ |
+| PR ដែល test បរាជ័យ → merge disabled? | _(សរសេរ)_ |
+| Dependabot PR ដំបូងមកពេលណា? CI run លើ PR របស់ bot ឬអត់? job `docker` skipped? | _(សរសេរ — ចាំថ្ងៃច័ន្ទ ឬ trigger ដោយដៃ: Insights → Dependency graph → Dependabot → "Check for updates")_ |
+| Dependabot ស្នើ jackson-databind 2.21.6 (HIGH ពី Trivy report) ឬអត់? | _(សរសេរ)_ |
+
+សំណួរ:
+1. `strict: true` ("Require branches to be up to date before merging") — PR ដែលបើកមុន `main` ប្តូរ ត្រូវ rebase/merge មុន — ហេតុអ្វីសំខាន់ពេលមាន ២ PR ព្រមគ្នា?
+2. Status check ត្រូវការ**ឈ្មោះ job** ជាក់លាក់ (`unit-test`, `integration-test`) — បើប្តូរឈ្មោះ job ក្នុង `ci.yml` កើតអ្វី?
+3. Badge ចង្អុល `?branch=main` — បើគ្មាន param តើបង្ហាញ run ណា?
+4. Dependabot update SHA របស់ action + comment `# vX.Y.Z` — បើអ្នក pin SHA ដោយគ្មាន comment version, Dependabot ធ្វើអ្វី?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_

@@ -1,0 +1,47 @@
+# Phase A2 Task 5 — Dependabot: GitHub បើក PR ដោយស្វ័យប្រវត្តិពេលមាន version ថ្មី
+# ► ហេតុអ្វី: Trivy (Task 4) ប្រាប់ថា "មាន CVE" ក្រោយ build; Dependabot ប្រាប់ "មាន version ថ្មី" មុន — ២ ផ្នែកនៃ loop ដដែល
+#   ឧ. Tomcat 11.0.24 → 11.0.25 (2026-09-29) យើងកែដោយដៃ; ថ្ងៃក្រោយ Dependabot បើក PR ជំនួស → CI run → merge
+# ► "no latest" (CLAUDE.md §4): pin version ជានិច្ច តែ update ដោយ PR ដែលឆ្លង CI — មិនមែន tag ចល័ត
+# ► PR របស់ bot run CI ដូច PR ធម្មតា (លំហាត់ Task 5: ផ្ទៀងផ្ទាត់) — job docker skipped (មិនមែន push ទៅ main)
+version: 2
+updates:
+  # Java dependency (pom.xml) — Spring Boot BOM, driver, Testcontainers, tomcat override
+  - package-ecosystem: maven
+    directory: /mini-shop                 # ► monorepo: pom.xml នៅ mini-shop/ មិនមែន root (ផែនការសរសេរ "/" — ខុសសម្រាប់ repo នេះ)
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5           # ► កុំឱ្យ bot បើក PR ២០ ក្នុងពេលតែមួយ
+    groups:
+      spring-boot:                        # ► Spring Boot parent + starters ជា PR តែមួយ (version ត្រូវរួមគ្នា)
+        patterns: ["org.springframework.boot:*"]
+    ignore:
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major"]   # ► major upgrade ត្រូវការ ADR (CLAUDE.md §3) — មិនមែន PR bot
+
+  # GitHub Actions ក្នុង .github/workflows — update ទាំង SHA និង comment "# vX.Y.Z"
+  - package-ecosystem: github-actions
+    directory: /                          # ► workflows នៅ root (.github/workflows/) — ត្រឹមត្រូវ
+    schedule:
+      interval: weekly
+      day: monday
+
+  # Base image ក្នុង Dockerfile (eclipse-temurin:21-jdk / 21-jre-alpine)
+  - package-ecosystem: docker
+    directory: /mini-shop                 # ► Dockerfile នៅ mini-shop/
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]   # ► Java 21 → 25 ជាការសម្រេចចិត្ត មិនមែន PR bot
+
+  # compose.yaml (postgres:17) — pin major 17; minor/patch update តាម PR
+  - package-ecosystem: docker-compose
+    directory: /mini-shop
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]   # ► postgres 17 → 18 = migration data, មិនមែន PR ធម្មតា
