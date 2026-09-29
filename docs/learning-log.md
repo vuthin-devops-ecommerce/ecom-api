@@ -453,3 +453,40 @@ File: `README.md` (badge, Development workflow), `.github/dependabot.yml`
 **ចម្លើយ:**
 
 _(សរសេរនៅទីនេះ)_
+
+---
+
+## Phase A2 / Task 6 — Documentation & Reflection (2026-09-29)
+
+| Deliverable | ស្ថានភាព | អ្នកណា |
+|---|---|---|
+| `docs/decisions/004-ci-job-structure.md` | Proposed → **Accepted** ពេលអ្នកឆ្លើយសំណួរ ៣ ចុង ADR | អ្នក |
+| `docs/decisions/005-security-scan-policy.md` | Proposed → **Accepted** ពេលអ្នកឆ្លើយសំណួរ ៣ ចុង ADR (gate block ពិតរួច 2026-09-29) | អ្នក |
+| `docs/runbooks/ci-failure.md` | ✅ សរសេររួច ពី symptom ពិត ៩ (1a–1d, 2a–2c, 3a–3e) | Claude |
+| README "Development workflow" | ✅ | Claude |
+| ចម្លើយសំណួរឆ្លុះបញ្ចាំង Task 0–5 ក្នុង file នេះ | _(សរសេរនៅទីនេះ)_ | អ្នក |
+
+### សំណួរធំ (សម្រាប់ Phase ក្រោយ — ពី `phase-a2-plan.md` Task 6)
+
+1. CI push image រួច — **អ្នកណា** deploy វា? ឥឡូវនៅតែជាអ្នកដោយដៃ។ Phase A3 (`kubectl set image …:<sha>`) និង E (GitOps) ដោះស្រាយយ៉ាងណា?
+
+   _(សរសេរនៅទីនេះ)_
+
+2. បើ CI ឆ្លង តែ app crash នៅ production — CI ខ្វះអ្វី? (hint: image ដែល push មិនដែលត្រូវ **start** ក្នុង CI — smoke test `docker run` + `/actuator/health`? contract test?)
+
+   _(សរសេរនៅទីនេះ)_
+
+3. Secret `DB_PASSWORD` នៅក្នុង `.env` លើម៉ាស៊ីនអ្នក — ពេល deploy ទៅ server ពិត វាទៅនៅឯណា? (Phase A3 K8s Secret → Phase B Vault)
+
+   _(សរសេរនៅទីនេះ)_
+
+### Definition of Done Phase A2 (ពិនិត្យ 2026-09-29)
+
+- [x] Push ទៅ branch ណាមួយ → `ci.yml` run: compile + unit + integration
+- [x] PR → CI ត្រូវឆ្លងមុន merge (branch protection, repo public)
+- [x] Merge ទៅ `main` → image `ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>` + `:latest` (ឈ្មោះ `mini-shop` តាម phase-a3-plan, មិនមែន `<username>/mini-shop`)
+- [x] Trivy CRITICAL → pipeline ក្រហម (បញ្ជាក់ដោយ CVE ពិត tomcat 11.0.24)
+- [x] README badge
+- [x] Build ទី២ លឿនជាង ២ ដង (33s vs 1m09s unit; docker build 14s vs 1m32s ពេល cache hit)
+- [ ] ADR-004 (ផែនការសរសេរ `004-ci-strategy.md`; CLAUDE.md កក់ `004-ci-job-structure.md` — ប្រើឈ្មោះ CLAUDE.md) → Accepted
+- [ ] Dependabot PR ដំបូង review (រង់ចាំ)

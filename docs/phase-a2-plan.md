@@ -291,6 +291,6 @@ updates:
 | 3 Image → ghcr.io | ✅ | 2026-09-28 | build មុន cache: 1m32s (go-offline 24s, package 12s, export cache 45s) ក្រោយ: __ · image `mini-shop:1279d03` |
 | 4 Trivy | ✅ | 2026-09-29 | run ១: CRITICAL 3 (tomcat-embed-core 11.0.24) → push skipped (gate ពិត) · fix tomcat 11.0.25 → run ២: CRITICAL 0, HIGH 2 (report), push ✅ · scan 41–61s (DB download) |
 | 5 Protection + badge | ✅ | 2026-09-29 | repo → public; protection main: PR + checks unit-test/integration-test + enforce_admins · badge · dependabot.yml (4 ecosystems) |
-| 6 Docs | ⬜ | | — |
+| 6 Docs | 🟡 | | runbook ci-failure.md ✅ · README workflow ✅ · ADR-004/005 → Accepted (អ្នក) · learning-log ចម្លើយ (អ្នក) |
 
 **បន្ទាប់:** Phase A3 — Kubernetes លើ `kind` (Deployment, Service, ConfigMap, Secret, probes)
