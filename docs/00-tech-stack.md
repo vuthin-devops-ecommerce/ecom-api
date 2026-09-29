@@ -122,3 +122,17 @@ curl localhost:8080/actuator/health  # → {"status":"UP"}
 |---|---|
 | 2026-09-22 | បង្កើតឯកសារ; កែ stack ពី Spring Boot 3.x / PostgreSQL 16 → Spring Boot 4.0.x / PostgreSQL 17 ឱ្យត្រូវនឹងគម្រោងពិត |
 | 2026-09-27 | Spring Boot 4.0.x → **4.1.x** (`4.1.1`) — GA default នៅ start.spring.io បានផ្លាស់ប្តូរ (minor version, គ្មាន ADR)។ ចំណាំ: Initializr metadata ផ្តល់ id `4.1.1.RELEASE` តែ Maven Central មានតែ `4.1.1` — ត្រូវកែ `<parent>` version ដោយដៃក្រោយ generate |
+---
+
+## ៨. Phase A3 — tool បន្ថែម (2026-09-29)
+
+| Tool | Version (pin) | ទីតាំង pin | ចំណាំ |
+|---|---|---|---|
+| kind | **v0.33.0** | `~/tools/kind/kind.exe` (Windows), `scripts/check-env.sh` | node image ខាងក្រោមត្រូវផ្គូផ្គង release នេះ |
+| kindest/node | **v1.37.0** `@sha256:a1ed56cf…` | `k8s/kind-config.yaml` | Kubernetes version របស់ cluster; digest = immutable |
+| kubectl | **v1.36.1** (ភ្ជាប់មកជាមួយ Docker Desktop) | Docker Desktop version | skew ±1 minor ពី server 1.37 ✅; upgrade Docker Desktop = kubectl ប្តូរ |
+| ingress-nginx | **controller-v1.15.1** | URL ក្នុង `phase-a3-plan.md` Task 1 / README | ធ្លាប់សរសេរ `main` → pin tag |
+| metrics-server | **v0.9.0** | URL ក្នុង `phase-a3-plan.md` Task 7 | ធ្លាប់ `latest` → pin |
+| k6 | (Task 7 — pin ពេលតម្លើង) | | optional |
+
+Windows: tool ក្នុង `C:\Users\user\tools\{kind,trivy,apache-maven-3.9.16}` — user PATH បន្ថែមរួច។ Download ក្នុង Linux container ធ្វើមិនបានលើ network ការិយាល័យ (TLS interception — `docs/runbooks/ci-failure.md` §៥); kind pull node image តាម Docker Desktop (ដើរបាន)។

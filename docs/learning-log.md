@@ -490,3 +490,46 @@ _(សរសេរនៅទីនេះ)_
 - [x] Build ទី២ លឿនជាង ២ ដង (33s vs 1m09s unit; docker build 14s vs 1m32s ពេល cache hit)
 - [ ] ADR-004 (ផែនការសរសេរ `004-ci-strategy.md`; CLAUDE.md កក់ `004-ci-job-structure.md` — ប្រើឈ្មោះ CLAUDE.md) → Accepted
 - [ ] Dependabot PR ដំបូង review (រង់ចាំ)
+
+---
+
+# Phase A3 — Kubernetes លើ kind
+
+## Phase A3 / Task 0–1 — tool + cluster (2026-09-29)
+
+Tool: kind v0.33.0 (`~/tools/kind`), kubectl v1.36.1 (Docker Desktop), `scripts/check-env.sh` (ថ្មី)។ File: `k8s/kind-config.yaml` (node image pin digest, port 80/443 mapping, label ingress-ready)។
+Version drift ក្នុង `phase-a3-plan.md` កែរួច: `postgres:16-alpine` → `postgres:17`, ingress-nginx `main` → `controller-v1.15.1`, metrics-server `latest` → `v0.9.0`, kind `latest` → `v0.33.0`, `<username>` → `vuthin-devops-ecommerce`។
+
+### សំណួរឆ្លុះបញ្ចាំង (ពី `phase-a3-plan.md` Task 1)
+
+1. `coredns`, `kube-proxy`, `etcd`, `kube-apiserver` (និង `kube-scheduler`, `kube-controller-manager`, `kindnet`) — មួយៗធ្វើអ្វី? (១ បន្ទាត់រាល់មួយ, មើល `kubectl get pods -n kube-system -o wide`)
+
+   _(សរសេរនៅទីនេះ)_
+
+2. kind run node ជា Docker container → Pod = "container ក្នុង container"? production ពិតខុសអ្វី?
+
+   _(សរសេរនៅទីនេះ)_
+
+3. (ពី kind-config) ហេតុអ្វី 2 worker មិនមែន 1? ហេតុអ្វី ingress controller ត្រូវនៅ control-plane ក្នុង kind?
+
+   _(សរសេរនៅទីនេះ)_
+
+### លំហាត់ស្វែងយល់ cluster (½ ថ្ងៃ — កត់អ្វីដែលឃើញ)
+
+```bash
+kubectl get nodes -o wide                  # 3 node Ready? INTERNAL-IP? CONTAINER-RUNTIME?
+docker ps                                  # node = container (image kindest/node)
+kubectl get pods -A -o wide                # pod អ្វីខ្លះ K8s run ខ្លួនឯង? នៅ node ណា?
+kubectl describe node minishop-worker      # Capacity/Allocatable cpu+memory? Conditions?
+kubectl api-resources | head -40
+kubectl -n ingress-nginx get pods -o wide  # controller នៅ control-plane?
+```
+
+_(សរសេរនៅទីនេះ)_
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 0–1
+
+- **`kind create cluster`** ជោគជ័យ (~1 នាទី, pull `kindest/node:v1.37.0` តាម Docker Desktop) — 3 node Ready, `docker ps` បង្ហាញ container ៣ ឈ្មោះ `minishop-control-plane|worker|worker2`, control-plane ប៉ុណ្ណោះមាន port `0.0.0.0:80->80, 443->443`។
+- **ingress-nginx pod `ErrImagePull`** — `describe pod` → Events: `tls: failed to verify certificate: x509: certificate signed by unknown authority` ពេល pull `registry.k8s.io/ingress-nginx/...`។ មូលហេតុដដែលនឹង A2 Task 4: kind node = Linux container → containerd មិនទុកចិត្ត Somansa CA (network ការិយាល័យ)។ Docker Desktop pull node image បាន (Windows trust) តែ **pull ក្នុង node** ខុសផ្លូវ។ ដំណោះស្រាយ: export CA ពី Windows cert store (PowerShell) → `scripts/kind-trust-ca.sh <pem> minishop` (docker cp → `update-ca-certificates` → restart containerd លើ node ទាំង ៣) → pod retry ខ្លួនឯង → Running។ **ត្រូវ run ម្តងទៀតរាល់ `kind create`**។ CA មិន commit; script commit (generic)។
+- **Controller schedule លើ `minishop-worker2` មិនមែន control-plane** — manifest `controller-v1.15.1` provider/kind មាន `nodeSelector: kubernetes.io/os: linux` ប៉ុណ្ណោះ (version ចាស់មាន `ingress-ready: "true"`) → hostPort 80 បើកលើ worker2 ដែលគ្មាន `extraPortMappings` → laptop ចូលមិនដល់។ ដោះស្រាយ: `kubectl -n ingress-nginx patch deployment ingress-nginx-controller --type=merge -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/os":"linux","ingress-ready":"true"}}}}}'` (toleration control-plane មានស្រាប់) → pod ថ្មីលើ control-plane → `curl localhost` = 404 ពី nginx (ត្រឹមត្រូវ — មិនទាន់មាន Ingress rule)។ Task 6 (Kustomize) គួរដាក់ patch នេះជា file ជំនួស command ដោយដៃ។
+  - សំណួរ: ហេតុអ្វី label `ingress-ready` ក្នុង kind-config នៅតែសំខាន់ទោះ manifest មិនប្រើ? ជម្រើសផ្សេង: `extraPortMappings` លើ worker ទាំង ២? បញ្ហាអ្វី?

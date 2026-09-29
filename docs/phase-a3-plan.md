@@ -1,7 +1,7 @@
 # Phase A3 — Kubernetes លើ kind
 
 > **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md`, `docs/phase-a-plan.md`, `docs/phase-a2-plan.md` ជាមុន។
-> តម្រូវការជាមុន: Phase A2 ចប់ — image `ghcr.io/<username>/mini-shop:<sha>` មាននៅ registry។
+> តម្រូវការជាមុន: Phase A2 ចប់ — image `ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>` មាននៅ registry។
 > អ្នកប្រើកំពុងរៈន — ពន្យល់ជាភាសាខ្មែរ ណែនាំជាជំហាន **កុំ generate manifest ទាំងអស់ជំនួស**។
 > ពេលអ្នកប្រើ paste error ពី `kubectl` ជួយអានវាតាមលំដាប់: `describe` → `logs` → `events`។
 
@@ -12,7 +12,7 @@
 
 ## គោលដៈដំណាក់កាល A3
 
-ដក `docker-compose.yml` ចេញ → app + Postgres run លើ Kubernetes cluster ក្នុងម៉ាស៊ីនអ្នក
+ដក `compose.yaml` ចេញ → app + Postgres run លើ Kubernetes cluster ក្នុងម៉ាស៊ីនអ្នក
 ជាមួយ health probe, config/secret ដាច់ពី image, rolling update ដោយ downtime = 0។
 
 **Definition of Done:**
@@ -57,7 +57,7 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 kubectl version --client
 
 # kind
-[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64   # ← pin (ធ្លាប់ latest)
 chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind
 kind version
 
@@ -107,7 +107,7 @@ docker ps                                  # ← សម្គាល់: node គ
 
 **Ingress controller:**
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/kind/deploy.yaml   # ← pin tag (ធ្លាប់ main)
 kubectl wait --namespace ingress-nginx --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller --timeout=90s
 ```
@@ -174,7 +174,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:16-alpine
+          image: postgres:17            # ← កែ 2026-09-29: 00-tech-stack ឈ្នះ (ធ្លាប់ 16-alpine)
           ports: [{ containerPort: 5432 }]
           envFrom:
             - configMapRef: { name: postgres-config }
@@ -248,7 +248,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/<username>/mini-shop:<sha>     # ← pin sha! មិនដែល :latest
+          image: ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>     # ← pin sha! មិនដែល :latest
           ports: [{ containerPort: 8080, name: http }]
           envFrom:
             - configMapRef: { name: app-config }
@@ -366,7 +366,7 @@ done | tee rollout.log
 **លំហាត់ 5.1 — Rolling update:**
 ```bash
 # terminal ២: push commit ថ្មីទៈ main (Phase A2 CI build image ថ្មី) → យក sha ថ្មី
-kubectl -n minishop set image deployment/minishop-app app=ghcr.io/<username>/mini-shop:<new-sha>
+kubectl -n minishop set image deployment/minishop-app app=ghcr.io/vuthin-devops-ecommerce/mini-shop:<new-sha>
 kubectl -n minishop rollout status deployment/minishop-app
 grep -v 200 rollout.log                    # ← ត្រូវ**ទទៈ** (គ្មាន non-200)
 ```
@@ -420,7 +420,7 @@ kind: Kustomization
 resources: [../../base]
 namespace: minishop
 images:
-  - name: ghcr.io/<username>/mini-shop
+  - name: ghcr.io/vuthin-devops-ecommerce/mini-shop
     newTag: <sha>                  # ← កន្លែងតែមួយដែលត្រូវកែពេល release
 replicas:
   - name: minishop-app
@@ -441,7 +441,7 @@ kubectl diff -k k8s/overlays/local              # ← មុន apply រាល�
 
 ```bash
 # metrics-server សម្រាប់ kind (ត្រូវ --kubelet-insecure-tls)
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.0/components.yaml   # ← pin (ធ្លាប់ latest)
 kubectl -n kube-system patch deployment metrics-server --type=json \
   -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
 kubectl top nodes && kubectl top pods -n minishop    # ចាំ ~1 នាទី
@@ -506,8 +506,8 @@ kubectl -n minishop get hpa -w             # TARGETS 60% → REPLICAS 2→3→4?
 
 | Task | ស្ថានភាព | ថ្ងៈបញ្ចប់ | កំណត់ចំណាំ |
 |---|---|---|---|
-| 0 kubectl + kind | ⬜ | | |
-| 1 Cluster + Ingress ctrl | ⬜ | | |
+| 0 kubectl + kind | ✅ | 2026-09-29 | kind v0.33.0 (~/tools), kubectl v1.36.1 (Docker Desktop), scripts/check-env.sh |
+| 1 Cluster + Ingress ctrl | ✅ | 2026-09-29 | node v1.37.0 ×3 · ingress-nginx controller-v1.15.1 · ជួប x509 (kind-trust-ca.sh) + nodeSelector patch |
 | 2 Postgres StatefulSet | ⬜ | | PVC រស់ក្រោយ delete? __ |
 | 3 App Deployment + probes | ⬜ | | error ដំបូងដែលជួប: __ |
 | 4 Service + Ingress | ⬜ | | |
