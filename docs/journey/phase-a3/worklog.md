@@ -13,7 +13,7 @@
 | 2 | namespace + Postgres StatefulSet | ✅ 2026-09-29 | `postgres-0` Running, PVC រស់ក្រោយ delete |
 | 3 | app Deployment + ConfigMap + probes | ✅ 2026-09-30 | 2/2 Ready លើ worker ខុសគ្នា, health UP, 8 products; symptom ៤ ដោះស្រាយ |
 | 4 | Service + Ingress `minishop.local` | 🟡 ingress ដើរ (curl --resolve) | 200, POST 201, LB 11/9; hosts file រង់ចាំអ្នក |
-| 5 | rolling update 0 downtime, self-heal, rollback | ⬜ | |
+| 5 | rolling update 0 downtime, self-heal, rollback | ✅ 2026-09-30 | 0/69 ក្រោយ preStop; self-heal ~7s |
 | 6 | Kustomize base + overlays | ⬜ | |
 | 7 | metrics-server + HPA + k6 | ⬜ | |
 | 8 | docs: ADR-006/007, runbooks, README | 🟡 ADR-006 Proposed | |
@@ -96,9 +96,24 @@ kubectl -n minishop exec postgres-0 -- psql -U minishop -d minishop -c '\l'
 
 **ផែនការដើម:** `k8s/app/service.yaml` (ClusterIP 80 → `http`), `k8s/app/ingress.yaml` (`ingressClassName: nginx`, host `minishop.local`), hosts file Windows `C:\Windows\System32\drivers\etc\hosts` (`127.0.0.1 minishop.local`, ត្រូវ admin), `curl http://minishop.local/api/products`, load-balancing តាម `logs -l app=minishop --prefix`។
 
-## Task 5 — Rolling update / self-heal / rollback ⬜ (ADR-007)
+## Task 5 — Rolling update / self-heal / rollback ✅ (ADR-007 Proposed)
 
-**នឹងធ្វើ:** loop `curl` 5/s → `rollout.log`; push commit ថ្មី → CI image sha ថ្មី → `kubectl set image` → `rollout status` → `grep -v 200 rollout.log` ត្រូវទទេ; `rollout undo`; `delete pod -l app=minishop` → វាស់វិនាទីដាច់; deploy ខូច (readiness 503) → pod ចាស់នៅ។ បើមាន 5xx → `preStop` + `terminationGracePeriodSeconds` + Spring `server.shutdown: graceful`។
+**Setup:** load loop background `curl -s -m 2 --resolve minishop.local:80:127.0.0.1 http://minishop.local/api/products` រាល់ 0.2s (ពិត ~2–3 req/s លើ Windows) → `rollout.log` (time + code)។ Image ថ្មី: `afa3e91` (CI push ពី merge PR #9 — រាល់ merge ទៅ main push image ដូច្នេះមិនចាំបាច់ commit code)។ Baseline 45 req, 0 fail។
+
+| Run | ធ្វើ | req | non-200 | ភស្តុតាង |
+|---|---|---|---|---|
+| 5.1a | `set image afa3e91` (គ្មាន preStop) | 51 | 2 (`000`) | nginx: `connect() failed (111: Connection refused)` → IP pod ចាស់ |
+| 5.1b | apply `preStop sleep 10` + `SERVER_SHUTDOWN=graceful` (rollout ទៅ e8f7f68) | 59 | 2 | nginx 499 ក្រោយ 2.0s ទៅ pod ចាស់ — pod ទាំងនោះកើតពី template **គ្មាន** preStop |
+| 5.1c | `set image afa3e91` — pod ចាស់មាន preStop | 69 | **0** | nginx គ្មាន error |
+| 5.2 | `rollout undo` | 66 | 0 | image ត្រឡប់ e8f7f68 |
+| 5.3 | `delete pod -l app=minishop` (ទាំង ២) | 36 | 16 (503) | 14:09:36→:43 ≈ 7s គ្មាន endpoint Ready; pod ថ្មី 1/1 ក្នុង 17s |
+| 5.4 | `set env SPRING_DATASOURCE_URL=…no-such-db…` | 165 | 0 | pod ថ្មី CrashLoopBackOff `UnknownHostException: no-such-db`; pod ចាស់ 2/2 នៅបម្រើ → `rollout undo` |
+
+**File:** `k8s/app/deployment.yaml` (`lifecycle.preStop.sleep.seconds: 10`), `k8s/app/configmap.yaml` (`SERVER_SHUTDOWN`, `SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: 20s`), `docs/decisions/007-rolling-update-strategy.md`។ Cluster ចុងក្រោយ: image `e8f7f68` = manifest ក្នុង git។
+
+**ជួបពិត:** `rollout undo` warning `last-applied-configuration` មិន update → git manifest ជា source (Phase E GitOps)។ `rollout status` ត្រឡប់ **មុន** pod ចាស់បញ្ចប់ termination (preStop) — វាស់ត្រូវរង់ចាំ `Terminating` បាត់។
+
+**ផែនការដើម:**
 
 ## Task 6 — Kustomize ⬜
 

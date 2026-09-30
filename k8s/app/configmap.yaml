@@ -12,6 +12,9 @@ data:
   SPRING_DATASOURCE_USERNAME: minishop
   SPRING_PROFILES_ACTIVE: dev            # ► dev = Flyway បន្ថែម db/dev seed (8 products) ដើម្បី curl /api/products មានទិន្នន័យ; plan សរសេរ "k8s" តែ profile នោះមិនមាន
   JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+  SERVER_SHUTDOWN: graceful                          # ► = server.shutdown: graceful — ពេល SIGTERM Tomcat ឈប់ទទួល connection ថ្មី តែបញ្ចប់ request ដែលកំពុងដើរ
+  SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: 20s   # ► រង់ចាំ request ដើររហូតដល់ 20s (10s preStop + 20s ≤ terminationGracePeriodSeconds 30s)
+  # ► ដាក់ទីនេះជា env ជំនួស application.yml → មិនត្រូវ rebuild image (Spring relaxed binding: SERVER_SHUTDOWN → server.shutdown)
   # ► JAVA_TOOL_OPTIONS: JVM អាន env នេះដោយស្វ័យប្រវត្តិ (log "Picked up JAVA_TOOL_OPTIONS")។ MaxRAMPercentage=75 → heap ≤ 75% នៃ **memory limit របស់ container**
   #   (JVM ស្គាល់ cgroup limit) → 512Mi limit → heap ~384Mi, សល់ 25% សម្រាប់ metaspace/thread/native → ចៀស OOMKilled
   #   សំណួរ: Dockerfile ENTRYPOINT មាន -XX:MaxRAMPercentage=75.0 រួច — ហេតុអ្វីដាក់ទីនេះទៀត? (hint: អ្នកណាកែបានដោយមិន rebuild image?)

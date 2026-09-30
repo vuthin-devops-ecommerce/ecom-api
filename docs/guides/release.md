@@ -1,7 +1,7 @@
 # Release និង rollback
 
 > **គោលបំណង:** យក code ពី branch ទៅ image ទៅ cluster, និងថយក្រោយពេលខូច · **អ្នកអាន:** អ្នក release · **Update:** 2026-09-30
-> ស្ថានភាព: build/scan/push **ស្វ័យប្រវត្តិ**; deploy ទៅ cluster **ដោយដៃ** (Phase E: GitOps)។ Zero-downtime ត្រូវបញ្ជាក់នៅ Phase A3 Task 5 (ADR-007)។
+> ស្ថានភាព: build/scan/push **ស្វ័យប្រវត្តិ**; deploy ទៅ cluster **ដោយដៃ** (Phase E: GitOps)។ Zero-downtime បញ្ជាក់រួច (A3 Task 5, ADR-007)។
 
 ## ១. ពី code ទៅ image
 
@@ -31,7 +31,7 @@ kubectl -n minishop set image deployment/minishop-app app=$NEW
 kubectl -n minishop rollout status deployment/minishop-app
 ```
 
-រំពឹង: pod ថ្មីឡើងម្តងមួយ (`maxSurge: 1`), pod ចាស់ចុះតែពេលថ្មី Ready (`maxUnavailable: 0`)។ Pod ថ្មីមិន Ready (readiness fail) → rollout ជាប់, **pod ចាស់នៅបម្រើ traffic**។
+រំពឹង: pod ថ្មីឡើងម្តងមួយ (`maxSurge: 1`), pod ចាស់ចុះតែពេលថ្មី Ready (`maxUnavailable: 0`)។ Pod ថ្មីមិន Ready (readiness fail) → rollout ជាប់, **pod ចាស់នៅបម្រើ traffic**។ វាស់ 2026-09-30: 0 error / 69 request ក្រោម load ([ADR-007](../decisions/007-rolling-update-strategy.md)) — ទាមទារ `preStop sleep 10` + graceful shutdown; `rollout status` ត្រឡប់មុន pod ចាស់បញ្ចប់ termination (~10s)។
 
 បន្ទាប់: update `image:` ក្នុង `k8s/app/deployment.yaml` ឱ្យត្រូវ → PR (manifest = ការពិត; `set image` តែឯង = drift)។ Phase A3 Task 6 (Kustomize) ផ្លាស់វាទៅ `images.newTag` កន្លែងតែមួយ។
 

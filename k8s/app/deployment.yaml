@@ -63,6 +63,14 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true             # ► image មិនអាចសរសេរ — Spring/Tomcat ត្រូវការ /tmp → emptyDir ខាងក្រោម
             capabilities: { drop: ["ALL"] }
+          lifecycle:
+            preStop:
+              sleep: { seconds: 10 }   # ► Task 5 (ជួបពិត 2026-09-30): គ្មាន preStop → rollout ឃើញ non-200 ២/៥១
+              # ► ហេតុអ្វី: ពេល pod លុប K8s ធ្វើ ២ រឿង **ព្រមគ្នា** (មិនមែនតាមលំដាប់): (ក) kubelet ផ្ញើ SIGTERM (ខ) ដក pod ពី EndpointSlice
+              #   → ingress-nginx ដឹងក្រោយពីរបីវិនាទី។ ក្នុងចន្លោះនោះ nginx នៅផ្ញើទៅ pod ដែលបិទរួច → "connect() failed (111: Connection refused)"
+              # ► sleep 10s = pod ចាស់នៅបម្រើ ខណៈ nginx update upstream; បន្ទាប់ SIGTERM → Spring graceful shutdown (SERVER_SHUTDOWN ក្នុង ConfigMap)
+              #   សរុប ≤ terminationGracePeriodSeconds (30s): 10s preStop + ≤ 20s drain request
+              # ► `sleep:` ជា action ដើមរបស់ K8s (មិនត្រូវការ /bin/sleep ក្នុង image) — ប្រសើរជាង exec ["sleep","10"]
           volumeMounts:
             - { name: tmp, mountPath: /tmp }
       volumes:

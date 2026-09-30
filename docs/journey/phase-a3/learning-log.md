@@ -122,3 +122,19 @@ File: `k8s/app/ingress.yaml` (service.yaml ពី Task 3)។ Test ដោយ Clau
 **ចម្លើយ:**
 
 _(សរសេរនៅទីនេះ)_
+
+## Phase A3 / Task 5 — Rolling update, rollback, self-healing (2026-09-30)
+
+លទ្ធផលពិត (តារាងពេញក្នុង [worklog.md](worklog.md) Task 5 និង [ADR-007](../../decisions/007-rolling-update-strategy.md)): គ្មាន preStop → 2/51 fail; preStop 10s + graceful → **0/69**; undo 0/66; deploy ខូច 0/165; លុប pod ទាំង ២ → ~7s 503។
+
+### សំណួរឆ្លុះបញ្ចាំង (ពី plan Task 5 + ADR-007)
+
+1. ហេតុអ្វី rollout ដំបូងមាន `Connection refused` ទោះ `maxUnavailable: 0`? (hint: SIGTERM និងការដក endpoint កើតព្រមគ្នា)
+2. ហេតុអ្វី rollout ទី ២ (ក្រោយ apply fix) នៅតែ fail? pod ណាដែលត្រូវលុប — វាមាន preStop ឬអត់?
+3. លុប pod ទាំង ២ → ~7s 503។ ហេតុអ្វី `replicas: 2` មិនជួយ? អ្វីអាចជួយ (PodDisruptionBudget? topologySpread? replicas ច្រើនជាង?)
+4. Deploy ខូច (DB URL ខុស) → 0 error។ probe ណា និង setting ណាធ្វើឱ្យវាអាចទៅរួច?
+5. `maxSurge 1 / maxUnavailable 0` vs `0 / 1` — ខុសគ្នាលើ resource និង availability យ៉ាងណា? Canary ផ្តល់អ្វីដែល RollingUpdate គ្មាន?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_

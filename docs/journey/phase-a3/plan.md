@@ -511,7 +511,7 @@ kubectl -n minishop get hpa -w             # TARGETS 60% → REPLICAS 2→3→4?
 | 2 Postgres StatefulSet | ✅ | 2026-09-29 | postgres-0 (worker2), PVC data-postgres-0 Bound 1Gi standard · PVC រស់ក្រោយ delete pod + STS: ✅ (UID ដដែល, data នៅ) |
 | 3 App Deployment + probes | ✅ | 2026-09-30 | error ដែលជួប: ImagePullBackOff 401 → PAT secret · CrashLoop Flyway non-empty schema · UnknownHost postgres · Docker VM 1.9GB OOM → 8GB · លទ្ធផល: 2/2 Ready, start 4.7s, 8 products |
 | 4 Service + Ingress | 🟡 | | ingress minishop.local → 200, POST 201, LB 11/9 ពីរ pod · hosts file (អ្នក) |
-| 5 Rolling update | ⬜ | | non-200 count: __ / self-heal ដាច់: __s |
+| 5 Rolling update | ✅ | 2026-09-30 | non-200: 2/51 (គ្មាន preStop) → **0/69** (preStop 10s + graceful) · undo 0/66 · deploy ខូច 0/165 · self-heal (លុប pod ទាំង ២) ដាច់ **~7s** (16×503) · ADR-007 |
 | 6 Kustomize | ⬜ | | |
 | 7 HPA + k6 | ⬜ | | max replicas ដល់: __ |
 | 8 Docs | ⬜ | | |
