@@ -509,7 +509,7 @@ kubectl -n minishop get hpa -w             # TARGETS 60% → REPLICAS 2→3→4?
 | 0 kubectl + kind | ✅ | 2026-09-29 | kind v0.33.0 (~/tools), kubectl v1.36.1 (Docker Desktop), scripts/check-env.sh |
 | 1 Cluster + Ingress ctrl | ✅ | 2026-09-29 | node v1.37.0 ×3 · ingress-nginx controller-v1.15.1 · ជួប x509 (kind-trust-ca.sh) + nodeSelector patch |
 | 2 Postgres StatefulSet | ✅ | 2026-09-29 | postgres-0 (worker2), PVC data-postgres-0 Bound 1Gi standard · PVC រស់ក្រោយ delete pod + STS: ✅ (UID ដដែល, data នៅ) |
-| 3 App Deployment + probes | ⬜ | | error ដំបូងដែលជួប: __ |
+| 3 App Deployment + probes | ✅ | 2026-09-30 | error ដែលជួប: ImagePullBackOff 401 → PAT secret · CrashLoop Flyway non-empty schema · UnknownHost postgres · Docker VM 1.9GB OOM → 8GB · លទ្ធផល: 2/2 Ready, start 4.7s, 8 products |
 | 4 Service + Ingress | ⬜ | | |
 | 5 Rolling update | ⬜ | | non-200 count: __ / self-heal ដាច់: __s |
 | 6 Kustomize | ⬜ | | |

@@ -11,7 +11,7 @@
 | 0 | kubectl + kind | ✅ 2026-09-29 | `scripts/check-env.sh` 10 ok |
 | 1 | cluster 3 node + ingress-nginx | ✅ 2026-09-29 | `kubectl get nodes` Ready ×3, `curl localhost` 404 nginx |
 | 2 | namespace + Postgres StatefulSet | ✅ 2026-09-29 | `postgres-0` Running, PVC រស់ក្រោយ delete |
-| 3 | app Deployment + ConfigMap + probes | ⬜ នឹងធ្វើ | |
+| 3 | app Deployment + ConfigMap + probes | ✅ 2026-09-30 | 2/2 Ready លើ worker ខុសគ្នា, health UP, 8 products; symptom ៤ ដោះស្រាយ |
 | 4 | Service + Ingress `minishop.local` | ⬜ | |
 | 5 | rolling update 0 downtime, self-heal, rollback | ⬜ | |
 | 6 | Kustomize base + overlays | ⬜ | |
@@ -69,7 +69,13 @@ kubectl -n minishop exec postgres-0 -- psql -U minishop -d minishop -c '\l'
 
 ---
 
-## Task 3 — App Deployment + ConfigMap + probes ⬜ (នឹងធ្វើ)
+## Task 3 — App Deployment + ConfigMap + probes 🟡
+
+**ធ្វើរួច (2026-09-29):** `k8s/app/configmap.yaml` (URL → Service `postgres`, profile `dev` សម្រាប់ seed, `JAVA_TOOL_OPTIONS`), `deployment.yaml` (2 replica, RollingUpdate 1/0, image `:e8f7f68`, secretKeyRef, startup/liveness/readiness, requests 250m/384Mi limit 512Mi, runAsUser 100 + readOnlyRootFilesystem + emptyDir /tmp), `service.yaml` (ClusterIP 80 → http)។ `kubectl apply -f k8s/app/` → pod ×2 **ImagePullBackOff**: events `401 Unauthorized … anonymous token` → អ្នកជ្រើស pattern production: PAT `read:packages` → `kubectl create secret docker-registry ghcr-creds` + `imagePullSecrets` → pull ✅។ បន្ទាប់: CrashLoop `Found non-empty schema` (table `t` ពីលំហាត់ Task 2 → `drop table t`) → Flyway V1/V2/seed ✅ → CrashLoop `UnknownHostException: postgres` (transient ក្រោយ Docker restart) → **Docker Desktop VM (Hyper-V) 1.9 GB ងាប់ ២ ដង** → `scale --replicas=0`; រង់ចាំអ្នកបង្កើន memory ≥ 8 GB (Settings → Resources) រួច `scale --replicas=2` → port-forward → curl។
+
+**លទ្ធផលចុងក្រោយ (2026-09-30, Docker VM 8 GB, node allocatable 7.7 GiB):** `scale --replicas=2` → rollout ជោគជ័យ; pod ×2 `1/1 Running` លើ `worker` និង `worker2`; EndpointSlice ready=true ×2; `Started MiniShopApplication in 4.7s`; port-forward → `/actuator/health/readiness` UP, `/liveness` UP, `/api/products` = 8 (seed dev)។ `kubectl top` → "Metrics API not available" (Task 7 metrics-server)។
+
+**ផែនការដើម:**
 
 **គោលដៅ:** `minishop-app` ×2 replica run ពី image ghcr.io, config តាម ConfigMap, password តាម Secret ដដែល, probe ៣ ប្រភេទ។
 

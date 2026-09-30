@@ -565,3 +565,30 @@ _(សរសេរនៅទីនេះ)_
 - `kubectl apply -f k8s/postgres/` apply **ទាំង** `secret.example.yaml` និង `secret.yaml` (ឈ្មោះ object ដដែល `postgres-secret`) → log "created" រួច "configured" — file ក្រោយឈ្នះ (លំដាប់ alphabet: secret.example < secret.yaml → password ពិតឈ្នះ, តែដោយសំណាង)។ Task 6 Kustomize រាយ resource ជាក់លាក់ → បញ្ហានេះបាត់។
 - PVC Bound ភ្លាមទោះ StorageClass local-path: PV បង្កើតពេល pod schedule (WaitForFirstConsumer) → PV ជាប់នឹង node `worker2` → pod postgres-0 នឹង**តែងតែ**ទៅ worker2 (RWO + local disk)។ សេណារីយ៉ូ: worker2 ងាប់ → pod Pending រហូត — នេះជាហេតុផលមួយក្នុង ADR-006។
 - **លំហាត់ ១–២ (ភស្តុតាងពី cluster, 2026-09-29):** ក្រោយ delete pod + delete/apply StatefulSet — pod ឈ្មោះ `postgres-0` ដដែល (age ថ្មី), PVC `data-postgres-0` **UID ដដែល** `pvc-3ec56de9…` (មិនបានបង្កើតថ្មី), `select count(*) from t` = 1 → data រស់ទាំង ២ ករណី។ ចម្លើយ "ហេតុអ្វី" នៅជារបស់អ្នក (ខាងលើ)។
+
+## Phase A3 / Task 3 — App Deployment + ConfigMap + probes (2026-09-29)
+
+File: `k8s/app/{configmap,deployment,service}.yaml` (comment ក្នុង file: probe ៣ ប្រភេទ, securityContext, resources)។
+
+### អ្វីដែលជួបពិតពេលធ្វើ Task 3
+
+- **error ដំបូង (តាមតារាង "ចំណុចដែលអ្នកនឹងខូច"): `ImagePullBackOff`** — `kubectl -n minishop get events` → `Failed to pull image "ghcr.io/vuthin-devops-ecommerce/mini-shop:e8f7f68": … failed to fetch anonymous token: … 401 Unauthorized`។ អាន: មិនមែន x509 (CA បានដោះស្រាយ Task 1), មិនមែន tag ខុស — **401 = registry ត្រូវការ login**: package `mini-shop` លើ ghcr នៅ **private** (repo public តែ package visibility ដាច់ដោយឡែក)។ ជម្រើស: (ក) GitHub → Packages → mini-shop → Package settings → Change visibility → Public (ងាយសម្រាប់រៀន, image គ្មាន secret); (ខ) `kubectl -n minishop create secret docker-registry ghcr-creds --docker-server=ghcr.io --docker-username=<user> --docker-password=<PAT read:packages>` + `imagePullSecrets` ក្នុង deployment (production pattern)។
+  - ការសម្រេចរបស់អ្នក + ហេតុផល: _(សរសេរនៅទីនេះ)_
+- gotcha ដែលចៀសមុន: `runAsNonRoot: true` + image `USER spring` (ឈ្មោះ) → kubelet "cannot verify user is non-root" → បន្ថែម `runAsUser: 100` (uid ពី `adduser -S` alpine, ពិនិត្យដោយ `docker run … id spring`)។
+- `readOnlyRootFilesystem: true` → emptyDir mount `/tmp` (Tomcat work dir) — សាកលុប emptyDir មើល error ពិត?
+
+### សំណួរឆ្លុះបញ្ចាំង (ពី `phase-a3-plan.md` Task 3)
+
+1. Liveness fail → K8s ធ្វើអ្វី? Readiness fail → ធ្វើអ្វី? DB ដាច់ ១ នាទី — ចង់ restart app ឬគ្រាន់តែឈប់ផ្ញើ traffic? ហេតុអ្វីច្រឡំ ២ នេះគ្រោះថ្នាក់?
+2. `requests` vs `limits` — ហេតុអ្វីមិនកំណត់ CPU limit? (ទស្សនៈ ២ ខាង)
+3. Pin `<sha>` ក្នុង manifest → រាល់ release កែ manifest ដោយដៃ — Phase E (GitOps) ដោះស្រាយយ៉ាងណា?
+4. (ពី configmap) `JAVA_TOOL_OPTIONS` ទីនេះ + `-XX:MaxRAMPercentage` ក្នុង Dockerfile — អ្នកណាកែបានដោយមិន rebuild?
+
+**ចម្លើយ:**
+
+_(សរសេរនៅទីនេះ)_
+- **ក្រោយ secret `ghcr-creds` (PAT read:packages) → image pull ✅** (`Pulled … already present`) — pattern production: credential ក្នុង Secret type `kubernetes.io/dockerconfigjson`, ជាប់ namespace, មិន commit។ ផ្ទៀងផ្ទាត់ credential ដោយមិនបង្ហាញ: `curl -H "Authorization: Basic <auth ពី secret>" https://ghcr.io/token?scope=repository:…:pull` → 200។
+- **symptom ទី ២: `CrashLoopBackOff`** — `logs --previous` → `FlywayException: Found non-empty schema(s) "public" but no schema history table. Use baseline() or set baselineOnMigrate to true`។ មូលហេតុ: table `t` ពីលំហាត់ Task 2 នៅក្នុង schema → Flyway បដិសេធ migrate schema ដែលមាន object ស្រាប់ដោយគ្មាន history (ការពារ DB ដែលមានទិន្នន័យ)។ ដោះស្រាយ: `drop table t` (dev data) — **មិន** `baselineOnMigrate: true` (វានឹងលាក់បញ្ហានេះនៅ production)។ ក្រោយនោះ Flyway apply V1 products, V2 orders, R seed ✅។
+- **symptom ទី ៣: `CrashLoopBackOff` ម្តងទៀត — `UnknownHostException: postgres`** ភ្លាមក្រោយ Docker restart: app start មុន coredns/postgres ready → K8s គ្មាន `depends_on` → app crash → kubelet restart (backoff 10s, 20s, 40s…) រហូតដល់ DNS មក → ធម្មតា; នេះជាហេតុផលដែល app ត្រូវ "crash fast + restart" មិនមែន "wait forever"។ ជម្រើសផ្សេង: initContainer រង់ចាំ DB (plan Task 3 ផែនទី compose → K8s)។
+- **symptom ទី ៤ (ធំ): Docker Desktop VM ងាប់ ២ ដង** — `kubectl`: `TLS handshake timeout`, `docker ps`: 500/hang, `wsl -l -v`: docker-desktop Stopped។ ស៊ើបអង្កេត: Docker Desktop ប្រើ **Hyper-V backend** (`WslEngineEnabled: false` → `.wslconfig` 10GB មិនមានឥទ្ធិពល) ជាមួយ default **1.9 GB RAM** (`docker info` MemTotal), 20 CPU។ kind ៣ node ទទេ = ~1.1 GB (control-plane 850 MiB) + app JVM ×2 (~400 MiB) + ingress → លើស → VM OOM → cluster ដាច់ទាំងអស់។ ដោះស្រាយបណ្តោះអាសន្ន: `scale deployment/minishop-app --replicas=0`។ ដោះស្រាយពិត (អ្នក): Docker Desktop → Settings → Resources → Memory ≥ **8 GB** (host មាន 31 GB), CPUs 4–6 → Apply & restart។ មេរៀន: `requests` ក្នុង manifest (384Mi ×2 + 128Mi) មានន័យតែពេល node មាន memory ពិត — `kubectl describe node` Allocatable ត្រូវមើលមុន deploy។
+- **លទ្ធផល Task 3 (2026-09-30, ក្រោយ Docker VM → 8 GB):** `kubectl get nodes -o jsonpath=…allocatable.memory` = 8123180Ki (មុន ~1.9 GB) → `scale --replicas=2` → pod ×2 Ready លើ node ខុសគ្នា, startup 4.7s, health UP, 8 products។ សំណួរ: ហេតុអ្វី scheduler ដាក់ pod ២ លើ node ខុសគ្នាដោយគ្មាន affinity rule? តើវាធានាឬអត់? (hint: Task 5 self-heal, podAntiAffinity/topologySpreadConstraints)
