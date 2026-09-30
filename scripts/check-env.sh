@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-env.sh — ពិនិត្យ tool + version លើម៉ាស៊ីន ធៀបនឹង docs/00-tech-stack.md
+# check-env.sh — ពិនិត្យ tool + version លើម៉ាស៊ីន ធៀបនឹង docs/reference/tech-stack.md
 # ប្រើ: bash scripts/check-env.sh        (Git Bash លើ Windows ក៏បាន)
 # ► ហេតុអ្វី: "run លើម៉ាស៊ីនខ្ញុំបាន" ភាគច្រើន = version ខុសគ្នា។ script នេះឆ្លើយក្នុង 5 វិនាទី។
 # ► exit 1 បើ tool ចាំបាច់ណាមួយបាត់ — ប្រើក្នុង onboarding និងមុន debug អ្វីផ្សេង

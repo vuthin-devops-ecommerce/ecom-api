@@ -1,6 +1,6 @@
 # Phase A4 — Terraform (Infrastructure as Code)
 
-> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md` និង `docs/phase-a3-plan.md` ជាមុន។
+> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md` និង `docs/journey/phase-a3/plan.md` ជាមុន។
 > តម្រូវការជាមុន: Phase A3 ចប់ — អ្នកប្រើបង្កើត kind cluster + ingress + namespace **ដោយដៈ**បានរួច។
 > Phase នេះបំលែងជំហានដោយដៈទាំងនោះទៈជា code។ ពន្យល់ជាភាសាខ្មែរ។
 > **កុំ generate `.tf` ទាំងអស់ជំនួស** — ផ្តល់គ្រោង ឱ្យអ្នកប្រើសរសេរ រួច review `terraform plan` ជាមួយគ្នា។
@@ -495,7 +495,7 @@ terraform destroy                         # ← ⏰ រៈបចំ alarm!
 - [ ] `docs/runbooks/terraform-drift.md` — រកឃៈញ drift → សម្រេច (apply ឬ import ឬ kill manual change)
 - [ ] `docs/runbooks/terraform-state-recovery.md` — state បាត់/ខូច ត្រូវធ្វៈយ៉ាងណា (`terraform state pull`, backup, import ឡៈងវិញ)
 - [ ] `infra/README.md` — bootstrap ពី ០: `01-cluster` → `02-platform` → `kubectl apply -k`; teardown order **បញ្ច្រាស**
-- [ ] `docs/learning-log.md`
+- [ ] `docs/journey/phase-a4/learning-log.md`
 
 **សំណួរធំ (Phase ក្រោយ):**
 1. `terraform apply` នៈតែជាអ្នកចុច — GitOps សម្រាប់ infra (Atlantis / HCP run on PR) → Phase E
@@ -520,4 +520,4 @@ terraform destroy                         # ← ⏰ រៈបចំ alarm!
 | 8 Cloud (optional) | ⬜ | | ចំណាយ: $__ / destroyed ✔? |
 | 9 Docs | ⬜ | | |
 
-**បន្ទាប់:** ✅ **Phase A ចប់** → សម្រាកសរុប ១ សប្តាហ៏: អាន learning-log ទាំងអស់ពី 00 → A4, សរសេរ `docs/phase-a-retrospective.md` (អ្វីពិបាកបំផុត, អ្វីដែលអ្នកនឹងធ្វៈខុសពីមុន) → **Phase B: បំបែក Payment service** (Helm chart, service-to-service auth, External Secrets, contract test)
+**បន្ទាប់:** ✅ **Phase A ចប់** → សម្រាកសរុប ១ សប្តាហ៏: អាន learning-log ទាំងអស់ពី 00 → A4, សរសេរ `docs/journey/phase-a4/retrospective.md` (អ្វីពិបាកបំផុត, អ្វីដែលអ្នកនឹងធ្វៈខុសពីមុន) → **Phase B: បំបែក Payment service** (Helm chart, service-to-service auth, External Secrets, contract test)

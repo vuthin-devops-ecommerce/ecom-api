@@ -41,7 +41,7 @@ Phase A3 ដក `compose.yaml` ចេញ — DB ត្រូវ run ក្នុ
 
 ## ការសម្រេចចិត្ត
 
-1. **Phase A3–A4 (kind, រៀន): StatefulSet `replicas: 1`** + headless Service + `volumeClaimTemplates` + `postgres:17` (00-tech-stack)។ គោលដៅ: យល់ identity/PVC/probe — មិនមែន HA។
+1. **Phase A3–A4 (kind, រៀន): StatefulSet `replicas: 1`** + headless Service + `volumeClaimTemplates` + `postgres:17` (tech-stack)។ គោលដៅ: យល់ identity/PVC/probe — មិនមែន HA។
 2. **មិនប្រើ Deployment** សម្រាប់ DB ទោះ replicas: 1 — ដើម្បីកុំឱ្យ rolling update បង្កើត Postgres ២ លើ disk ដដែល។
 3. **Production ពិត (ក្រៅ scope repo នេះ): managed DB** — ADR នេះកត់ថា StatefulSet ទីនេះជា **simulation** មិនមែន pattern ដែលត្រូវចម្លងទៅ production ដោយគ្មាន operator + backup + failover ដែលបានសាកល្បង។ Terraform (A4, ADR-008) នឹងបង្កើត "platform" — DB managed ស្ថិតក្នុងស្រទាប់នោះ មិនមែនក្នុង `k8s/`។
 4. Password តាម Secret (`secret.yaml` gitignored, `.example` commit) — Phase B ជំនួសដោយ External Secrets/Vault។
@@ -54,7 +54,7 @@ Phase A3 ដក `compose.yaml` ចេញ — DB ត្រូវ run ក្នុ
 - (−) pod ជាប់ node worker2 (local-path RWO) — self-healing Task 5 សម្រាប់ **app** ប៉ុណ្ណោះ; DB node ងាប់ = app 503 (readiness) — សេណារីយ៉ូល្អសម្រាប់ runbook `k8s-pod-not-ready.md`
 - (−) `kubectl apply -f k8s/postgres/` apply `secret.example.yaml` ដែរ (ឈ្មោះ object ដដែល) — Task 6 Kustomize រាយ resource ជាក់លាក់
 
-## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `learning-log.md` មុនប្តូរ status ជា Accepted)
+## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `docs/journey/phase-a3/learning-log.md` មុនប្តូរ status ជា Accepted)
 
 1. StatefulSet `replicas: 2` នឹងឱ្យអ្វី? (hint: PVC ២, DB ២ ដាច់ពីគ្នា, គ្មាន replication) — ហេតុអ្វី "scale" DB ខុសពី scale app?
 2. លំហាត់ ២: `delete statefulset` → PVC នៅ។ បើអ្នកចង់លុប data ពិត ត្រូវធ្វើអ្វី? ហេតុអ្វី K8s ធ្វើឱ្យវាពិបាកដោយចេតនា?

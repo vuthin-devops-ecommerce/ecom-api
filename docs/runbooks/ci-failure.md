@@ -135,4 +135,4 @@ docker build -t mini-shop:local mini-shop            # job docker step build (�
 ## ៧. ក្រោយដោះស្រាយ
 
 - symptom ថ្មីដែលមិនមានក្នុង runbook → បន្ថែម § ថ្មី ជាមួយបន្ទាត់ error **ពិត** + ថ្ងៃ។
-- កត់ពេលវេលា "ពី push ដល់ដឹង" ក្នុង `docs/learning-log.md`; បើ > 5 នាទី សួរថាហេតុអ្វី (cache miss? DB download?)។
+- កត់ពេលវេលា "ពី push ដល់ដឹង" ក្នុង `docs/journey/phase-a2/learning-log.md`; បើ > 5 នាទី សួរថាហេតុអ្វី (cache miss? DB download?)។
