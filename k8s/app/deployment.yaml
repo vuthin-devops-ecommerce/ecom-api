@@ -1,0 +1,71 @@
+# Phase A3 Task 3 — app Deployment: "ធានាថា minishop-app កំពុង run 2 copy ជានិច្ច"
+# ► Deployment → ReplicaSet → Pod: អ្នកកែ Deployment; ReplicaSet ថ្មីកើតរាល់ template ប្តូរ (rollout history = list ReplicaSet)
+# ► Update image: kubectl -n minishop set image deployment/minishop-app app=ghcr.io/vuthin-devops-ecommerce/mini-shop:<new-sha>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minishop-app
+  namespace: minishop
+  labels: { app: minishop }
+spec:
+  replicas: 2                    # ► 2 = self-healing/rolling update មានន័យ (1 = downtime ពេល pod ងាប់)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                # ► pod ថ្មី +1 (3 ក្នុងពេលតែមួយ) — ត្រូវការ resource បន្ថែម 1 pod
+      maxUnavailable: 0          # ► មិនដែលតិចជាង 2 Ready → 0 downtime (ADR-007: vs maxSurge 0/maxUnavailable 1)
+  selector:
+    matchLabels: { app: minishop }
+  template:
+    metadata:
+      labels: { app: minishop }
+    spec:
+      imagePullSecrets:
+        - name: ghcr-creds       # ► Secret type kubernetes.io/dockerconfigjson — kubelet ប្រើ login ghcr.io មុន pull (package private = pattern production)
+                                 #   បង្កើត (មិន commit — credential): kubectl -n minishop create secret docker-registry ghcr-creds \
+                                 #     --docker-server=ghcr.io --docker-username=<github-user> --docker-password=<PAT read:packages>
+                                 #   សេណារីយ៉ូ (ជួបពិត 2026-09-29): គ្មាន secret → ImagePullBackOff, events "401 Unauthorized … anonymous token"
+                                 #   សេណារីយ៉ូ: secret មាន តែ PAT ផុតកំណត់/scope ខុស → "403 denied" — pod ចាស់នៅ run (image cache លើ node), pod ថ្មី/node ថ្មីធ្លាក់
+                                 #   Phase B: PAT ក្នុង Secret ដោយដៃ → External Secrets/Vault; production ពិត: registry ដដែល cloud (ECR/GAR) + IAM គ្មាន password
+      securityContext:
+        runAsNonRoot: true       # ► kubelet បដិសេធ container ដែល run ជា root
+        runAsUser: 100           # ► Dockerfile: USER spring (alpine adduser -S → uid 100, gid 101)
+        runAsGroup: 101          #   សេណារីយ៉ូ (gotcha): គ្មាន runAsUser + image USER ជាឈ្មោះ (មិនមែនលេខ) → kubelet "cannot verify user is non-root" → CreateContainerConfigError
+        fsGroup: 101
+      containers:
+        - name: app
+          image: ghcr.io/vuthin-devops-ecommerce/mini-shop:e8f7f68   # ► pin sha (CLAUDE.md §4) — image ដែលឆ្លង test + Trivy ក្នុង A2; មិនដែល :latest
+          ports:
+            - { containerPort: 8080, name: http }   # ► ឈ្មោះ "http" → Service targetPort និង probe port យោងតាមឈ្មោះ (ប្តូរលេខ ១ កន្លែង)
+          envFrom:
+            - configMapRef: { name: app-config }
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres-secret, key: POSTGRES_PASSWORD }   # ► Secret ដដែលនឹង Postgres — key ១ = ការពិត ១
+          # ---------------- probe ៣ ប្រភេទ (សំណួរ: ច្រឡំ liveness/readiness គ្រោះថ្នាក់យ៉ាងណា?) ----------------
+          startupProbe:          # ► "app ចាប់ផ្តើមរួចហើយឬនៅ?" — liveness/readiness មិនរាប់រហូតដល់ probe នេះឆ្លង
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 2
+            failureThreshold: 30 # ► 30 × 2s = 60s ឱ្យ Spring Boot + Flyway (សេណារីយ៉ូ: បើគ្មាន → liveness សម្លាប់ app ដែលមិនទាន់ start = CrashLoop ជានិច្ច)
+          livenessProbe:         # ► "process នៅរស់ឬ?" fail → kubelet **restart** container (ប្រយ័ត្ន: DB ដាច់ ≠ app ងាប់ — liveness Spring មិនរាប់ DB)
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:        # ► "ទទួល traffic បានឬ?" fail → ដក pod ចេញពី Service endpoints (មិន restart) → traffic ទៅ pod ផ្សេង
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }   # ► scheduler ប្រើ requests; HPA (Task 7) គណនា % ពី requests cpu
+            limits: { memory: 512Mi }                # ► memory limit → OOMKilled បើលើស; CPU limit មិនកំណត់ (throttling — សំណួរ Task 3, ទស្សនៈ ២ ខាង)
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true             # ► image មិនអាចសរសេរ — Spring/Tomcat ត្រូវការ /tmp → emptyDir ខាងក្រោម
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}           # ► disk បណ្តោះអាសន្ន per pod — បាត់ពេល pod លុប (សេណារីយ៉ូ: បើគ្មាន → "java.io.IOException: Read-only file system" ពេល start)
+      terminationGracePeriodSeconds: 30   # ► Task 5: ពេលឱ្យ app បញ្ចប់ request ក្រោយ SIGTERM (Spring server.shutdown: graceful)

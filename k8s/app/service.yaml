@@ -1,0 +1,16 @@
+# Phase A3 Task 3/4 — Service ClusterIP សម្រាប់ app: IP ស្ថិរ + DNS "minishop-app" ពីមុខ pod ដែល IP ប្រែជានិច្ច
+# ► អ្វី: kube-proxy ចែក traffic ទៅ pod ដែល**Ready** (readiness probe ✅) ដែលមាន label app=minishop — round-robin ដោយប្រហែល
+# ► សេណារីយ៉ូ: pod readiness fail → ដកចេញពី Endpoints (kubectl -n minishop get endpoints minishop-app) → client មិនឃើញ error
+# ► ClusterIP = ចូលបានតែក្នុង cluster; ពីខាងក្រៅ: port-forward (debug), NodePort, LoadBalancer, ឬ Ingress (Task 4 — សំណួរ: ពេលណាប្រើមួយណា?)
+# ► សាកមុន Ingress: kubectl -n minishop port-forward svc/minishop-app 8080:80 → curl localhost:8080/actuator/health
+apiVersion: v1
+kind: Service
+metadata:
+  name: minishop-app
+  namespace: minishop
+  labels: { app: minishop }
+spec:
+  type: ClusterIP
+  selector: { app: minishop }
+  ports:
+    - { name: http, port: 80, targetPort: http }   # ► port 80 ក្នុង cluster → containerPort ឈ្មោះ "http" (8080) ក្នុង pod

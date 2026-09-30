@@ -1,0 +1,17 @@
+# Phase A3 Task 3 — config មិនសម្ងាត់របស់ app (ជំនួស environment: ក្នុង compose.yaml)
+# ► អ្វី: env var ដដែលដែល application.yml អាន (${SPRING_DATASOURCE_URL} …) — image មិនប្តូរ, config ប្តូរតាម environment
+# ► សេណារីយ៉ូ: cluster prod ប្រើ ConfigMap ផ្សេង (URL managed DB) ជាមួយ image **ដដែល** `:e8f7f68` — "build once, run anywhere"
+# ► សេណារីយ៉ូ: កែ value ទីនេះ + apply → pod ដែល run មិនឃើញ (env អានពេល start) → ត្រូវ rollout restart (Task 6: configMapGenerator + hash)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: minishop
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/minishop   # ► "postgres" = headless Service (k8s/postgres/service.yaml) — DNS ក្នុង namespace ដដែល; ដូច "db" ក្នុង compose
+  SPRING_DATASOURCE_USERNAME: minishop
+  SPRING_PROFILES_ACTIVE: dev            # ► dev = Flyway បន្ថែម db/dev seed (8 products) ដើម្បី curl /api/products មានទិន្នន័យ; plan សរសេរ "k8s" តែ profile នោះមិនមាន
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+  # ► JAVA_TOOL_OPTIONS: JVM អាន env នេះដោយស្វ័យប្រវត្តិ (log "Picked up JAVA_TOOL_OPTIONS")។ MaxRAMPercentage=75 → heap ≤ 75% នៃ **memory limit របស់ container**
+  #   (JVM ស្គាល់ cgroup limit) → 512Mi limit → heap ~384Mi, សល់ 25% សម្រាប់ metaspace/thread/native → ចៀស OOMKilled
+  #   សំណួរ: Dockerfile ENTRYPOINT មាន -XX:MaxRAMPercentage=75.0 រួច — ហេតុអ្វីដាក់ទីនេះទៀត? (hint: អ្នកណាកែបានដោយមិន rebuild image?)
