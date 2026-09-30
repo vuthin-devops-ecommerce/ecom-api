@@ -1,4 +1,6 @@
-# 00 — Technical Stack (ដំណាក់កាល A · ដំណាក់ទី០ Baseline)
+# Tech stack
+
+> **គោលបំណង:** version របស់ tool ទាំងអស់ — **source of truth** (CLAUDE.md §3) · **អ្នកអាន:** អ្នកណាក៏បាន · **Update:** 2026-09-30
 
 > **សម្រាប់ Claude Code:** ឯកសារនេះជា source of truth សម្រាប់ version របស់ tool ទាំងអស់។
 > កុំ upgrade major version ណាមួយ ដោយគ្មាន ADR ថ្មីក្នុង `docs/decisions/`។
@@ -8,8 +10,8 @@
 |---|---|
 | **ថ្ងៃបង្កើត** | 2026-09-22 |
 | **ស្ថានភាព** | អនុម័ត — ដំណាក់ទី០ |
-| **ឯកសារពាក់ព័ន្ធ** | `docs/phase-a-plan.md`, `docs/decisions/001-modular-monolith.md`, `CLAUDE.md` |
-| **ជំនួស** | បន្ទាត់ "Stack: Spring Boot 3.x · PostgreSQL 16" ក្នុង `phase-a-plan.md` (ចាស់) |
+| **ឯកសារពាក់ព័ន្ធ** | `docs/journey/phase-a/plan.md`, `docs/decisions/001-modular-monolith.md`, `CLAUDE.md` |
+| **ជំនួស** | បន្ទាត់ "Stack: Spring Boot 3.x · PostgreSQL 16" ក្នុង `docs/journey/phase-a/plan.md` (ចាស់) |
 
 ---
 
@@ -34,7 +36,7 @@
 | Health / Metrics | **Spring Boot Actuator** | `/actuator/health` → ក្រោយក្លាយជា liveness/readiness probe (Stage 4) |
 | Version control | **Git + GitHub** | CI សប្តាហ៍ទី៣ ត្រូវការ repo នៅលើ GitHub |
 | Local tooling | Docker Engine (សម្រាប់ DB ប៉ុណ្ណោះ), IDE, `curl` ឬ httpie, **springdoc-openapi `3.1.1`** (Swagger UI `/swagger-ui.html` — បន្ថែម 2026-09-27 ក្រោយ Task 1, dev convenience មិនមែន stage tool) | |
-| Documentation | `docs/decisions/` (ADR), `docs/learning-log.md`, `CLAUDE.md` | កត់ត្រាការសម្រេចចិត្ត + handoff Chat → Claude Code |
+| Documentation | `docs/decisions/` (ADR), `docs/journey/phase-*/learning-log.md`, `CLAUDE.md` | កត់ត្រាការសម្រេចចិត្ត + handoff Chat → Claude Code |
 
 ### Dependencies (ជ្រើសនៅ start.spring.io)
 
@@ -110,7 +112,7 @@ curl localhost:8080/actuator/health  # → {"status":"UP"}
 
 ---
 
-## ៧. សំណួរឆ្លុះបញ្ចាំង (ឆ្លើយក្នុង `docs/learning-log.md`)
+## ៧. សំណួរឆ្លុះបញ្ចាំង (ឆ្លើយក្នុង `docs/journey/phase-*/learning-log.md`)
 
 ហេតុអ្វីយើង pin `postgres:17` ជំនួស `postgres:latest`? វានឹងជះឥទ្ធិពលអ្វីនៅ Stage 1 (compose) និង Stage 2 (CI)?
 
@@ -131,8 +133,8 @@ curl localhost:8080/actuator/health  # → {"status":"UP"}
 | kind | **v0.33.0** | `~/tools/kind/kind.exe` (Windows), `scripts/check-env.sh` | node image ខាងក្រោមត្រូវផ្គូផ្គង release នេះ |
 | kindest/node | **v1.37.0** `@sha256:a1ed56cf…` | `k8s/kind-config.yaml` | Kubernetes version របស់ cluster; digest = immutable |
 | kubectl | **v1.36.1** (ភ្ជាប់មកជាមួយ Docker Desktop) | Docker Desktop version | skew ±1 minor ពី server 1.37 ✅; upgrade Docker Desktop = kubectl ប្តូរ |
-| ingress-nginx | **controller-v1.15.1** | URL ក្នុង `phase-a3-plan.md` Task 1 / README | ធ្លាប់សរសេរ `main` → pin tag |
-| metrics-server | **v0.9.0** | URL ក្នុង `phase-a3-plan.md` Task 7 | ធ្លាប់ `latest` → pin |
+| ingress-nginx | **controller-v1.15.1** | URL ក្នុង `docs/journey/phase-a3/plan.md` Task 1 / README | ធ្លាប់សរសេរ `main` → pin tag |
+| metrics-server | **v0.9.0** | URL ក្នុង `docs/journey/phase-a3/plan.md` Task 7 | ធ្លាប់ `latest` → pin |
 | k6 | (Task 7 — pin ពេលតម្លើង) | | optional |
 
 Windows: tool ក្នុង `C:\Users\user\tools\{kind,trivy,apache-maven-3.9.16}` — user PATH បន្ថែមរួច។ Download ក្នុង Linux container ធ្វើមិនបានលើ network ការិយាល័យ (TLS interception — `docs/runbooks/ci-failure.md` §៥); kind pull node image តាម Docker Desktop (ដើរបាន)។

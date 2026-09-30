@@ -1,6 +1,6 @@
 # Phase A3 — Worklog (អ្វីដែលធ្វើពិត / នឹងធ្វើ តាម Task)
 
-> ខុសពី `phase-a3-plan.md` (ផែនការ/មេរៀន) និង `learning-log.md` (ការឆ្លុះបញ្ចាំងរបស់អ្នករៀន)។
+> ខុសពី `docs/journey/phase-a3/plan.md` (ផែនការ/មេរៀន) និង `docs/journey/phase-a3/learning-log.md` (ការឆ្លុះបញ្ចាំងរបស់អ្នករៀន)។
 > Task នីមួយៗ — គោលដៅ · អ្វីដែលធ្វើ/នឹងធ្វើ (ជំហាន, command) · file · លទ្ធផល/ភស្តុតាង · អ្វីដែលត្រូវមើល។
 > ចាប់ផ្តើម 2026-09-29 · cluster `kind-minishop` លើ laptop · image ពី A2: `ghcr.io/vuthin-devops-ecommerce/mini-shop:e8f7f68`
 
@@ -12,7 +12,7 @@
 | 1 | cluster 3 node + ingress-nginx | ✅ 2026-09-29 | `kubectl get nodes` Ready ×3, `curl localhost` 404 nginx |
 | 2 | namespace + Postgres StatefulSet | ✅ 2026-09-29 | `postgres-0` Running, PVC រស់ក្រោយ delete |
 | 3 | app Deployment + ConfigMap + probes | ✅ 2026-09-30 | 2/2 Ready លើ worker ខុសគ្នា, health UP, 8 products; symptom ៤ ដោះស្រាយ |
-| 4 | Service + Ingress `minishop.local` | ⬜ | |
+| 4 | Service + Ingress `minishop.local` | 🟡 ingress ដើរ (curl --resolve) | 200, POST 201, LB 11/9; hosts file រង់ចាំអ្នក |
 | 5 | rolling update 0 downtime, self-heal, rollback | ⬜ | |
 | 6 | Kustomize base + overlays | ⬜ | |
 | 7 | metrics-server + HPA + k6 | ⬜ | |
@@ -22,9 +22,9 @@
 
 ## Task 0 — Tool ✅
 
-**គោលដៅ:** kubectl, kind លើ Windows, version pin ក្នុង `00-tech-stack.md`។
+**គោលដៅ:** kubectl, kind លើ Windows, version pin ក្នុង `docs/reference/tech-stack.md`។
 
-**ធ្វើ:** kubectl v1.36.1 មានស្រាប់ (Docker Desktop) → រក្សា (skew ±1 ពី server 1.37)។ kind **v0.33.0** download → `C:\Users\user\tools\kind\kind.exe` → user PATH (+ `tools\trivy`)។ `scripts/check-env.sh` ថ្មី (java/mvn/docker/git/gh/trivy/kubectl/kind/cluster)។ `00-tech-stack.md` §៨: kind v0.33.0, kindest/node v1.37.0, ingress-nginx controller-v1.15.1, metrics-server v0.9.0។
+**ធ្វើ:** kubectl v1.36.1 មានស្រាប់ (Docker Desktop) → រក្សា (skew ±1 ពី server 1.37)។ kind **v0.33.0** download → `C:\Users\user\tools\kind\kind.exe` → user PATH (+ `tools\trivy`)។ `scripts/check-env.sh` ថ្មី (java/mvn/docker/git/gh/trivy/kubectl/kind/cluster)។ `docs/reference/tech-stack.md` §៨: kind v0.33.0, kindest/node v1.37.0, ingress-nginx controller-v1.15.1, metrics-server v0.9.0។
 
 **កែ plan drift:** `postgres:16-alpine` → `postgres:17`; URL ingress `main` → tag; metrics-server `latest` → v0.9.0; kind `latest` → v0.33.0; `<username>` → org។
 
@@ -90,9 +90,11 @@ kubectl -n minishop exec postgres-0 -- psql -U minishop -d minishop -c '\l'
 
 ---
 
-## Task 4 — Service + Ingress ⬜
+## Task 4 — Service + Ingress 🟡
 
-**នឹងធ្វើ:** `k8s/app/service.yaml` (ClusterIP 80 → `http`), `k8s/app/ingress.yaml` (`ingressClassName: nginx`, host `minishop.local`), hosts file Windows `C:\Windows\System32\drivers\etc\hosts` (`127.0.0.1 minishop.local`, ត្រូវ admin), `curl http://minishop.local/api/products`, load-balancing តាម `logs -l app=minishop --prefix`។
+**ធ្វើរួច (2026-09-30):** `k8s/app/ingress.yaml` (`ingressClassName: nginx`, host `minishop.local`, path `/` Prefix → Service `minishop-app` port `http`; ដក annotation `rewrite-target` ចេញពី plan ដោយចេតនា) → `kubectl apply -f k8s/app/ingress.yaml`។ Test ដោយ `curl --resolve minishop.local:80:127.0.0.1` (មិនត្រូវ hosts file): `/actuator/health/readiness` UP, `/api/products` 8, `POST /api/products` 201, `curl http://localhost/` (Host ខុស) 404។ Load balancing (20 request, ingress-nginx access log): pod 10.244.1.3 = 11, pod 10.244.2.2 = 9។ នៅសល់: អ្នកបន្ថែម hosts file → `curl http://minishop.local/…` ផ្ទាល់ + browser Swagger។
+
+**ផែនការដើម:** `k8s/app/service.yaml` (ClusterIP 80 → `http`), `k8s/app/ingress.yaml` (`ingressClassName: nginx`, host `minishop.local`), hosts file Windows `C:\Windows\System32\drivers\etc\hosts` (`127.0.0.1 minishop.local`, ត្រូវ admin), `curl http://minishop.local/api/products`, load-balancing តាម `logs -l app=minishop --prefix`។
 
 ## Task 5 — Rolling update / self-heal / rollback ⬜ (ADR-007)
 

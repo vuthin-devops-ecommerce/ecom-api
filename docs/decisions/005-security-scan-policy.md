@@ -60,7 +60,7 @@ Tool ថ្មីតែមួយនៃដំណាក់នេះ: **Trivy** (`a
 - (−) Scan image ក្នុង daemon (A) មិនមែន digest ដែល push — ទទួលយក: content ដដែល, ខុសតែ metadata manifest
 - (−) CVE ថ្មីចេញក្រោយ image push រួច → pipeline នេះមិនដឹង (scan តែពេល build) — ចន្លោះដែលជម្រើស C បំពេញ
 
-## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `learning-log.md` មុនប្តូរ status ជា Accepted)
+## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `docs/journey/phase-a2/learning-log.md` មុនប្តូរ status ជា Accepted)
 
 1. ជម្រើស B "scan លើអ្វីដែល deploy ពិត" ស្តាប់ទៅសុវត្ថិភាពជាង — ហេតុអ្វី ADR នេះនៅតែជ្រើស A? តើមានករណីណាដែល A ខុស B?
 2. `ignore-unfixed: true` ធ្វើឱ្យ CVE មួយចំនួន "មើលមិនឃើញ" — អ្នកនឹងដឹងដោយរបៀបណាពេល fix ចេញ? (hint: Dependabot docker ecosystem, Task 5)

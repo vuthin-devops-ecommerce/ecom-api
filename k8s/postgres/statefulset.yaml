@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:17     # ► 00-tech-stack ឈ្នះ (plan ធ្លាប់សរសេរ 16-alpine); ដដែលនឹង compose + Testcontainers
+          image: postgres:17     # ► docs/reference/tech-stack.md ឈ្នះ (plan ធ្លាប់សរសេរ 16-alpine); ដដែលនឹង compose + Testcontainers
           ports:
             - { containerPort: 5432, name: pg }
           envFrom:

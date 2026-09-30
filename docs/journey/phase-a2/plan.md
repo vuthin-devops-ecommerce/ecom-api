@@ -1,6 +1,6 @@
 # Phase A2 — Continuous Integration (GitHub Actions)
 
-> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md` និង `docs/phase-a-plan.md` ជាមុន។
+> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md` និង `docs/journey/phase-a/plan.md` ជាមុន។
 > តម្រូវការជាមុន: Phase A Task 0–5 ត្រូវចប់ (ជាពិសេស Dockerfile ត្រូវ build បាន)។
 > អ្នកប្រើកំពុងរៀន — ពន្យល់ជាភាសាខ្មែរ ណែនាំជាជំហាន កុំសរសេរ YAML ទាំងអស់ជំនួស។
 
@@ -21,7 +21,7 @@
 - [ ] Trivy scan image — CRITICAL vulnerability → pipeline បរាជ័យ
 - [ ] README មាន CI status badge
 - [ ] Build ទី២ លឿនជាងទី១ យ៉ាងតិច ២ ដង (cache ដំណើរការ)
-- [ ] `docs/decisions/004-ci-strategy.md` សរសេររួច
+- [ ] `docs/decisions/004-ci-job-structure.md` សរសេររួច
 
 ---
 
@@ -271,7 +271,7 @@ updates:
 - [ ] `docs/decisions/004-ci-job-structure.md`
 - [ ] `docs/decisions/005-security-scan-policy.md`
 - [ ] `docs/runbooks/ci-failure.md` — "CI ក្រហម ត្រូវមើលអ្វីតាមលំដាប់?"
-- [ ] `docs/learning-log.md` — ចម្លើយសំណួរឆ្លុះបញ្ចាំងទាំងអស់
+- [ ] `docs/journey/phase-a2/learning-log.md` — ចម្លើយសំណួរឆ្លុះបញ្ចាំងទាំងអស់
 - [ ] README: ផ្នែក "Development workflow" (branch → PR → CI → merge)
 
 **សំណួរធំ (សម្រាប់ Phase ក្រោយ):**

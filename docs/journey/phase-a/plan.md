@@ -6,7 +6,7 @@
 
 **ថ្ងៃចាប់ផ្តើម:** 2026-09-21
 **រយៈពេលប៉ាន់ស្មាន:** សប្តាហ៍ ១–២ (Task 0–5), សប្តាហ៍ ៣+ (Task 6–10)
-**Stack:** Spring Boot 4.1.x · Java 21 · Maven (wrapper) · PostgreSQL 17 · Flyway · Docker — (កែ 2026-09-27 ឱ្យត្រូវ `00-tech-stack.md`)
+**Stack:** Spring Boot 4.1.x · Java 21 · Maven (wrapper) · PostgreSQL 17 · Flyway · Docker — (កែ 2026-09-27 ឱ្យត្រូវ `docs/reference/tech-stack.md`)
 
 ---
 
@@ -22,7 +22,7 @@
 - [x] Flyway migration V1, V2 apply ដោយស្វ័យប្រវត្តិ (+ `R__seed_dev_data` ក្រោម profile `dev`)
 - [x] `docs/decisions/` មាន ADR យ៉ាងតិច ២ (001, 002, 003)
 - [x] README មានជំហាន run ពេញលេញ
-- [ ] `docs/learning-log.md` — ចម្លើយសំណួរឆ្លុះបញ្ចាំង (របស់អ្នកប្រើ — មិនទាន់)
+- [ ] `docs/journey/phase-a/learning-log.md` — ចម្លើយសំណួរឆ្លុះបញ្ចាំង (របស់អ្នកប្រើ — មិនទាន់)
 
 ---
 
@@ -75,7 +75,7 @@
 
 **ផ្ទៀងផ្ទាត់:** `mvn spring-boot:run` (Postgres local ត្រូវ run សិន) → `curl localhost:8080/actuator/health`
 
-**សំណួរឆ្លុះបញ្ចាំង (សរសេរចម្លើយក្នុង docs/learning-log.md):**
+**សំណួរឆ្លុះបញ្ចាំង (សរសេរចម្លើយក្នុង docs/journey/phase-a/learning-log.md):**
 - `ddl-auto: validate` ខុសពី `update` យ៉ាងណា? ហេតុអ្វី `update` គ្រោះថ្នាក់នៅ production?
 
 ---
@@ -212,9 +212,9 @@ common/
 
 ## Task 5 — Containerize
 
-**Files:** `Dockerfile`, `.dockerignore`, `compose.yaml` (ឈ្មោះតាម 00-tech-stack), `.env.example` (→ `.env` gitignored)
+**Files:** `Dockerfile`, `.dockerignore`, `compose.yaml` (ឈ្មោះតាម tech-stack), `.env.example` (→ `.env` gitignored)
 
-> កែ 2026-09-27 ឱ្យត្រូវ `00-tech-stack.md`: `postgres:17` (មិនមែន `16-alpine`), Maven **wrapper** ក្នុង builder (មិនមែន image `maven:3.9`)។
+> កែ 2026-09-27 ឱ្យត្រូវ `docs/reference/tech-stack.md`: `postgres:17` (មិនមែន `16-alpine`), Maven **wrapper** ក្នុង builder (មិនមែន image `maven:3.9`)។
 > Code ពិតនៅ `mini-shop/Dockerfile` និង `mini-shop/compose.yaml` — ខាងក្រោមជាចំណុចសំខាន់ មិនមែនចម្លងទាំងស្រុង។
 
 **Dockerfile (multi-stage, non-root):**
@@ -249,13 +249,13 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
 - [ ] `docs/decisions/001-modular-monolith.md` (មានរួច)
 - [ ] `docs/decisions/002-order-schema-fk.md` (ពី Task 2)
 - [ ] `docs/decisions/003-product-id-not-entity-ref.md` (ពី Task 3)
-- [ ] `docs/learning-log.md`: ចម្លើយសំណួរឆ្លុះបញ្ចាំងទាំងអស់
+- [ ] `docs/journey/phase-a/learning-log.md`: ចម្លើយសំណួរឆ្លុះបញ្ចាំងទាំងអស់
 
 ---
 
 ## សំណួរធំសម្រាប់ដំណាក់កាលក្រោយ (កុំដោះស្រាយឥឡូវ)
 
-សរសេរចម្លើយបឋមក្នុង `docs/learning-log.md`:
+សរសេរចម្លើយបឋមក្នុង `docs/journey/phase-a/learning-log.md`:
 
 1. **Race condition:** អ្នកប្រើ ២ នាក់ order product ចុងក្រោយ ១ ក្នុងពេលដំណាលគ្នា — កើតអ្វី? (ចម្លើយ: optimistic/pessimistic locking — Phase B)
 2. **Deploy:** បើ V3 migration បរាជ័យពាក់កណ្តាលនៅ production — កើតអ្វី? (Phase D/E)
@@ -273,6 +273,6 @@ ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
 | 3 Order domain | ✅ | 2026-09-27 | `createOrder`: check-all-then-decrement, `@Transactional`, ហៅ `ProductService` (DTO ប៉ុណ្ណោះ) · `productId` ជា `Long` (ADR-003) · duplicate productId → 400 · smoke 8 cases: 201, stock 8→6/3→2, insufficient → 400 + stock **មិនប្រែ**, 400 dup, 404 product, 400 validation, GET 200 (EntityGraph, គ្មាន LazyInit), 404 · context-load validate ឆ្លង · order id ចាប់ពី 4 (sequence non-transactional — probe Task 2) |
 | 4 Tests | ✅ | 2026-09-27 | `./mvnw verify` BUILD SUCCESS: unit 7/7 (surefire, 0.2–1.2s) + IT 3/3 (failsafe, 16s ជាមួយ Testcontainers `postgres:17` 2.0.5) · IT បញ្ជាក់: stock ថយពិតក្នុង DB, 400 → stock មិនប្រែ, **fail ក្រោយកាត់ stock → rollback ពិត** (spy `save()` throw) · `OrderServiceTest` mock `ProductService` (ADR-003) · ចំណាំ: TC 2.x artifact `testcontainers-postgresql`, package `org.testcontainers.postgresql` |
 | 5 Docker | ✅ | 2026-09-27 | `docker compose up --build` ដំណើរការ · image `mini-shop:local` **403 MB** (jar 59 MB, base `21-jre-alpine`) · non-root `uid=100(spring)` · healthy ~15s ក្រោយ `up` (Started 7.4s — DB local) · Flyway V1+V2+R apply លើ volume ថ្មី · seed 8 products · `down`→`up` data នៅ (order 1, stock 49) · cached rebuild **2s** · builder ប្រើ `./mvnw` (Maven 3.9.16) · port DB មិន publish; `APP_PORT` override |
-| 6 Docs | ✅ | 2026-09-27 | `README.md` (run local/compose, API, tests) · ADR-001 (សរសេរថ្មី — ផែនការថា "មានរួច" តែមិនមាន), 002, 003 · `learning-log.md` skeleton ~18 សំណួរ — **ចម្លើយអ្នកប្រើនៅមិនទាន់សរសេរ** |
+| 6 Docs | ✅ | 2026-09-27 | `README.md` (run local/compose, API, tests) · ADR-001 (សរសេរថ្មី — ផែនការថា "មានរួច" តែមិនមាន), 002, 003 · `docs/journey/phase-a/learning-log.md` skeleton ~18 សំណួរ — **ចម្លើយអ្នកប្រើនៅមិនទាន់សរសេរ** |
 
 **បន្ទាប់:** Phase A2 — CI ជាមួយ GitHub Actions (build → test → image → ghcr.io)

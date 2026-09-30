@@ -6,7 +6,7 @@
 # របៀបអាន file នេះ: បន្ទាត់នីមួយៗមាន ៣ ផ្នែក
 #   ► អ្វី       — បន្ទាត់នេះធ្វើអ្វី
 #   ► សេណារីយ៉ូ  — កើតអ្វី "បើមាន" / "បើគ្មាន" បន្ទាត់នេះ (ស្រមៃមើលពិត)
-#   ► សំណួរ      — សំណួរ review, ឆ្លើយក្នុង docs/learning-log.md (Phase A2)
+#   ► សំណួរ      — សំណួរ review, ឆ្លើយក្នុង docs/journey/phase-a2/learning-log.md (Phase A2)
 #
 # គំនិតធំ: CI ជា feedback loop — រាល់ step សួរថា "បើ step នេះបរាជ័យ ខ្ញុំដឹងអ្វី? ក្នុងពេលប៉ុន្មាន?"
 # ការសម្រេចចិត្តបំបែក job: docs/decisions/004-ci-job-structure.md
@@ -267,7 +267,7 @@ jobs:
         working-directory: .   # ► override defaults (mini-shop) — step នេះមិនត្រូវការ folder app
 
 # =====================================================================================
-# សំណួរ review សរុប (ឆ្លើយក្នុង docs/learning-log.md)
+# សំណួរ review សរុប (ឆ្លើយក្នុង docs/journey/phase-a2/learning-log.md)
 #   1. Workflow នេះ run លើ commit ដែលកែតែ docs/*.md ដែរ — ខ្ជះខ្ជាយ ~1 នាទី។ គួរបន្ថែម on.push.paths ឬអត់?
 #      hint: Task 5 "Require status checks" — បើ workflow មិន run, check មិន report → PR docs-only merge មិនបាន
 #   2. បើ CI បៃតង តែ app crash ពេល run ពិត — workflow នេះខ្វះអ្វី? (Task 3 build image ដោះស្រាយផ្នែកមួយ)

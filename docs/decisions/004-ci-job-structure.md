@@ -20,7 +20,7 @@ Phase A2 Task 2 ត្រូវឱ្យ `OrderControllerIT` (Testcontainers + `
 | integration test (`OrderControllerIT`, 3 test) | ~27s (pull image + boot Spring + Flyway) | Docker daemon + image `postgres:17` |
 | checkout + setup-java + cache restore (ក្នុង CI) | ~10s ក្នុង ១ job | — |
 
-ច្បាប់ ៣ ក្នុង `phase-a2-plan.md`: **fail fast**, **reproducible**, **least privilege**។ Task 5 ត្រូវការឈ្មោះ status check
+ច្បាប់ ៣ ក្នុង `docs/journey/phase-a2/plan.md`: **fail fast**, **reproducible**, **least privilege**។ Task 5 ត្រូវការឈ្មោះ status check
 ជាក់លាក់សម្រាប់ branch protection។ Task 3 ត្រូវការ job `docker` ដែល run តែពេល test ទាំងអស់ឆ្លង។
 
 ## ជម្រើសដែលពិចារណា
@@ -49,7 +49,7 @@ Phase A2 Task 2 ត្រូវឱ្យ `OrderControllerIT` (Testcontainers + `
 - (−) ពេលសរុប (ទាំងអស់ឆ្លង) = unit + IT sequential — ទទួលយកព្រោះ fail fast សំខាន់ជាង ~20s
 - (−) Testcontainers pull `postgres:17` រាល់ run (runner ថ្មី, គ្មាន image cache) — វាស់ក្នុង tracker; បើយឺតពេក ជម្រើសក្រោយ: Docker layer cache ឬ image pre-pull
 
-## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `learning-log.md` មុនប្តូរ status ជា Accepted)
+## សំណួរសម្រាប់អ្នករៀន (ឆ្លើយក្នុង `docs/journey/phase-a2/learning-log.md` មុនប្តូរ status ជា Accepted)
 
 1. ជម្រើស A ក៏ fail fast នៅកម្រិត step ដែរ (Maven ឈប់ពេល surefire ធ្លាក់)។ ដូច្នេះអត្ថប្រយោជន៍**ពិត**របស់ B គឺអ្វី — លឿនជាង ឬ ច្បាស់ជាង?
 2. បើគម្រោងមាន IT 200 test (10 នាទី) តើអ្នកនៅជ្រើស B ឬប្តូរទៅ C? ហេតុអ្វី?

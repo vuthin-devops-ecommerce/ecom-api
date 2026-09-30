@@ -1,0 +1,27 @@
+# Phase A3 Task 4 — Ingress: http://minishop.local → Service minishop-app → pod
+# ► ផ្លូវ request: laptop :80 → kind control-plane container (extraPortMappings) → ingress-nginx controller (hostPort 80)
+#   → អាន Host header "minishop.local" → Service minishop-app:80 → pod Ready ណាមួយ :8080
+# ► Ingress = rule (L7: host/path); controller = nginx ដែលអនុវត្ត rule។ គ្មាន controller → Ingress object គ្មានឥទ្ធិពល
+# ► សេណារីយ៉ូ: curl http://localhost/ (Host ខុស) → 404 ពី nginx; curl -H "Host: minishop.local" http://localhost/ → app
+# ► hosts file (Windows, admin): C:\Windows\System32\drivers\etc\hosts ← "127.0.0.1 minishop.local"
+# ► plan មាន annotation rewrite-target: / — **ដកចេញ** ដោយចេតនា: ជាមួយ path "/" Prefix វាគ្មានប្រយោជន៍ ហើយបើថ្ងៃក្រោយ path "/api"
+#   វានឹងសរសេរ /api/products → / (ខូច routing ដោយស្ងាត់)
+# ► សំណួរ: ClusterIP vs NodePort vs LoadBalancer vs Ingress — ពេលណាប្រើមួយណា? ហេតុអ្វី kind ត្រូវការ extraPortMappings?
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minishop
+  namespace: minishop
+  labels: { app: minishop }
+spec:
+  ingressClassName: nginx        # ► ភ្ជាប់ទៅ IngressClass "nginx" (ingress-nginx បង្កើត) — cluster អាចមាន controller ច្រើន
+  rules:
+    - host: minishop.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minishop-app
+                port: { name: http }   # ► យោងឈ្មោះ port របស់ Service (80) — ដូច targetPort: http ក្នុង service.yaml

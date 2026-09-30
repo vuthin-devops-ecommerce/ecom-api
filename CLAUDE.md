@@ -38,15 +38,15 @@ Code នឹងកើតឡើងនៅ Phase A Task 0 ជាគម្រោង S
 - Phase A3: "**កុំ generate manifest ទាំងអស់ជំនួស**"
 - Phase A4: "**កុំ generate `.tf` ទាំងអស់ជំនួស**" — ផ្តល់គ្រោង រួច review `terraform plan` ជាមួយគ្នា
 
-**សំណួរឆ្លុះបញ្ចាំង** ដែលរាយក្នុងផែនការនីមួយៗ ជាផ្នែកនៃមេរៀន — រំលឹកអ្នកប្រើឆ្លើយក្នុង `docs/learning-log.md` **កុំឆ្លើយជំនួស**។
+**សំណួរឆ្លុះបញ្ចាំង** ដែលរាយក្នុងផែនការនីមួយៗ ជាផ្នែកនៃមេរៀន — រំលឹកអ្នកប្រើឆ្លើយក្នុង `docs/journey/phase-<x>/learning-log.md` **កុំឆ្លើយជំនួស**។ Symptom ពិត + command + លទ្ធផល → `docs/journey/phase-<x>/worklog.md` និង `docs/runbooks/` មិនមែន learning-log។ ឯកសារ product (architecture, guides, reference) ដាច់ពីឯកសាររៀន (journey) — មើល `docs/README.md`។
 
 ---
 
 ## ៣. Source of truth និងជម្លោះដែលដឹងហើយ
 
-1. **`docs/00-tech-stack.md` ឈ្នះជានិច្ច** សម្រាប់ version របស់ tool។ កុំ upgrade major version ណាមួយដោយគ្មាន ADR ថ្មីក្នុង `docs/decisions/`។
-2. ⚠️ **Version drift:** `phase-a3-plan.md` (`statefulset.yaml` → `postgres:16-alpine`) នៅ**ចាស់** — កែពេលដល់ Phase A3។ (`phase-a-plan.md` header + Task 5 កែរួច 2026-09-27។) តម្លៃត្រឹមត្រូវគឺ **Spring Boot 4.1.x / `postgres:17`**។ ពេលប៉ះផ្នែកនោះ ជម្រុញឱ្យកែឱ្យត្រូវ 00-tech-stack។
-3. File ដែលឯកសារយោង តែ**មិនទាន់មាន**: `docs/decisions/` ADR 004–009, `docs/runbooks/`, `scripts/check-env.sh`។ បង្កើតនៅពេលដល់ Task របស់វា មិនមែនមុន។ (មានរួច 2026-09-27: `README.md`, ADR 001–003, `docs/learning-log.md`។)
+1. **`docs/reference/tech-stack.md` ឈ្នះជានិច្ច** សម្រាប់ version របស់ tool។ កុំ upgrade major version ណាមួយដោយគ្មាន ADR ថ្មីក្នុង `docs/decisions/`។
+2. ⚠️ **Version drift:** A3 plan កែរួច 2026-09-29 (`postgres:17`, ingress/metrics-server/kind pin)។ `docs/journey/phase-a4/plan.md` នៅមាន `latest` (បន្ទាត់ ~60, ~436) និង `postgres:16` (~121) — កែពេលចាប់ផ្តើម A4។ តម្លៃត្រឹមត្រូវគឺ **Spring Boot 4.1.x / `postgres:17`** តាម tech-stack។
+3. File ដែលឯកសារយោង តែ**មិនទាន់មាន**: ADR 007–009, runbooks `k8s-pod-not-ready.md`, `k8s-rollback.md`, `terraform-*.md`។ បង្កើតនៅពេលដល់ Task របស់វា មិនមែនមុន។ (មានរួច 2026-09-30: ADR 001–006, `runbooks/ci-failure.md`, `scripts/check-env.sh`, `scripts/kind-trust-ca.sh`, `docs/journey/phase-{a,a2,a3}/{plan,worklog,learning-log}.md`, `docs/{README,architecture}.md`, `docs/guides/`, `docs/reference/`។)
 
 ---
 
@@ -64,7 +64,7 @@ Code នឹងកើតឡើងនៅ Phase A Task 0 ជាគម្រោង S
 
 ## ៥. ស្ថាបត្យកម្ម app (`mini-shop`) — ច្បាប់មិនអាចរំលោភ
 
-ពី `docs/phase-a-plan.md`:
+ពី `docs/journey/phase-a/plan.md`:
 
 1. **Package តាម domain មិនមែនតាម layer:** `com.devops.minishop.{catalog,order,common}`
 2. **`catalog` និង `order` មិន import entity/repository របស់គ្នាទៅវិញទៅមក** — ឆ្លងកាត់ Service ប៉ុណ្ណោះ (`OrderService` ហៅ `ProductService` **មិនមែន** `ProductRepository`)
@@ -78,7 +78,7 @@ Code នឹងកើតឡើងនៅ Phase A Task 0 ជាគម្រោង S
 
 ## ៦. ពាក្យបញ្ជា
 
-**Phase A ចប់ (2026-09-27):** code ក្នុង `mini-shop/` — ពាក្យបញ្ជា (ពី `docs/00-tech-stack.md` §៤–៥ និង `README.md`):
+**Phase A ចប់ (2026-09-27):** code ក្នុង `mini-shop/` — ពាក្យបញ្ជា (ពី `docs/reference/tech-stack.md` §៤–៥ និង `README.md`):
 
 ```bash
 cd mini-shop && cp .env.example .env && docker compose up --build   # app + postgres:17 (Task 5)
@@ -106,7 +106,7 @@ curl localhost:8080/actuator/health        # → {"status":"UP"}
 ```
 
 `./mvnw` (wrapper) ជានិច្ច — **មិនមែន** `mvn` ដែលតម្លើងលើម៉ាស៊ីន — ដើម្បីឱ្យ Maven version ដូចគ្នាលើ laptop និង CI។
-(ផែនការចាស់ខ្លះសរសេរ `mvn` ទទេ — 00-tech-stack បញ្ជាក់ wrapper។)
+(ផែនការចាស់ខ្លះសរសេរ `mvn` ទទេ — docs/reference/tech-stack.md បញ្ជាក់ wrapper។)
 
 ---
 
@@ -114,11 +114,11 @@ curl localhost:8080/actuator/health        # → {"status":"UP"}
 
 | Phase | ឯកសារ | Tool ថ្មី | លទ្ធផលសំខាន់ |
 |---|---|---|---|
-| Stage 0 | `docs/00-tech-stack.md` | Java 21, Maven, Spring Boot 4.1.x, PostgreSQL 17, Flyway, Actuator | baseline "ស្អាត" សម្រាប់ប្រៀបធៀប |
-| A | `docs/phase-a-plan.md` | Testcontainers, Docker + Compose | modular monolith `catalog` + `order`, `docker compose up --build` |
-| A2 | `docs/phase-a2-plan.md` | GitHub Actions, ghcr.io, Trivy | push → build/test/scan/push image ស្វ័យប្រវត្តិ, branch protection |
-| A3 | `docs/phase-a3-plan.md` | kind, kubectl, ingress-nginx, metrics-server, Kustomize, k6 | compose → K8s, probes, rolling update downtime=0, HPA |
-| A4 | `docs/phase-a4-plan.md` | Terraform ≥1.9, tflint, Helm provider | cluster + platform ជា code, module + បំបែក state, drift detection |
+| Stage 0 | `docs/reference/tech-stack.md` | Java 21, Maven, Spring Boot 4.1.x, PostgreSQL 17, Flyway, Actuator | baseline "ស្អាត" សម្រាប់ប្រៀបធៀប |
+| A | `docs/journey/phase-a/plan.md` | Testcontainers, Docker + Compose | modular monolith `catalog` + `order`, `docker compose up --build` |
+| A2 | `docs/journey/phase-a2/plan.md` | GitHub Actions, ghcr.io, Trivy | push → build/test/scan/push image ស្វ័យប្រវត្តិ, branch protection |
+| A3 | `docs/journey/phase-a3/plan.md` | kind, kubectl, ingress-nginx, metrics-server, Kustomize, k6 | compose → K8s, probes, rolling update downtime=0, HPA |
+| A4 | `docs/journey/phase-a4/plan.md` | Terraform ≥1.9, tflint, Helm provider | cluster + platform ជា code, module + បំបែក state, drift detection |
 | B | (មិនទាន់សរសេរ) | Helm, External Secrets/Vault, contract test | បំបែក `payment` ជា service ដាច់ |
 
 **ព្រំដែនស្រទាប់ (ADR-008):** Terraform ទទួលខុសត្រូវ **platform + infrastructure** (cluster, ingress-nginx, namespace, secret, VM, DNS) — **មិន** deploy `minishop-app` Deployment។ App deploy តាម `kubectl apply -k` (ក្រោយ: ArgoCD)។

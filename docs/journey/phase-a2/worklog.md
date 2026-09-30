@@ -1,6 +1,6 @@
 # Phase A2 — Worklog (អ្វីដែលធ្វើពិត តាម Task)
 
-> ឯកសារនេះខុសពី `phase-a2-plan.md` (ផែនការ/មេរៀន) និង `learning-log.md` (ការឆ្លុះបញ្ចាំងរបស់អ្នករៀន)។
+> ឯកសារនេះខុសពី `docs/journey/phase-a2/plan.md` (ផែនការ/មេរៀន) និង `docs/journey/phase-a2/learning-log.md` (ការឆ្លុះបញ្ចាំងរបស់អ្នករៀន)។
 > វាជា **កំណត់ហេតុអនុវត្ត**: Task នីមួយៗ — គោលដៅ · អ្វីដែលធ្វើ (ជំហាន/command) · file · លទ្ធផល/ភស្តុតាង · អ្វីដែលត្រូវមើល។
 > ថ្ងៃ: 2026-09-28 → 2026-09-29 · branch `develop` → PR → `main` · repo `vuthin-devops-ecommerce/ecom-api`
 

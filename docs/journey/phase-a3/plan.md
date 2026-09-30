@@ -1,6 +1,6 @@
 # Phase A3 — Kubernetes លើ kind
 
-> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md`, `docs/phase-a-plan.md`, `docs/phase-a2-plan.md` ជាមុន។
+> **សម្រាប់ Claude Code:** សូមអាន `CLAUDE.md`, `docs/journey/phase-a/plan.md`, `docs/journey/phase-a2/plan.md` ជាមុន។
 > តម្រូវការជាមុន: Phase A2 ចប់ — image `ghcr.io/vuthin-devops-ecommerce/mini-shop:<sha>` មាននៅ registry។
 > អ្នកប្រើកំពុងរៈន — ពន្យល់ជាភាសាខ្មែរ ណែនាំជាជំហាន **កុំ generate manifest ទាំងអស់ជំនួស**។
 > ពេលអ្នកប្រើ paste error ពី `kubectl` ជួយអានវាតាមលំដាប់: `describe` → `logs` → `events`។
@@ -174,7 +174,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:17            # ← កែ 2026-09-29: 00-tech-stack ឈ្នះ (ធ្លាប់ 16-alpine)
+          image: postgres:17            # ← កែ 2026-09-29: tech-stack ឈ្នះ (ធ្លាប់ 16-alpine)
           ports: [{ containerPort: 5432 }]
           envFrom:
             - configMapRef: { name: postgres-config }
@@ -492,7 +492,7 @@ kubectl -n minishop get hpa -w             # TARGETS 60% → REPLICAS 2→3→4?
 - [ ] `docs/runbooks/k8s-pod-not-ready.md` — តារាង "រោគសញ្ញា → មូលហេតុ → debug" ពី Task 3 + អ្វីដែលអ្នកជួបពិត
 - [ ] `docs/runbooks/k8s-rollback.md`
 - [ ] README: ផ្នែក "Run on Kubernetes (kind)" — ពី `kind create` ដល់ `curl`
-- [ ] `docs/learning-log.md` — ចម្លៈយទាំងអស់ + **កាលៈហក** rollout.log (ដាច់ប៉ុន្មានវិនាទីក្នុងលំហាត់ 5.3?)
+- [ ] `docs/journey/phase-a3/learning-log.md` — ចម្លៈយទាំងអស់ + **កាលៈហក** rollout.log (ដាច់ប៉ុន្មានវិនាទីក្នុងលំហាត់ 5.3?)
 
 **សំណួរធំ (Phase ក្រោយ):**
 1. `set image` ដោយដៈរាល់ release — អ្នកណាចាំ? បើភ្លេច? → Phase E: ArgoCD មើល git → apply ស្វ័យប្រវត្តិ
@@ -510,7 +510,7 @@ kubectl -n minishop get hpa -w             # TARGETS 60% → REPLICAS 2→3→4?
 | 1 Cluster + Ingress ctrl | ✅ | 2026-09-29 | node v1.37.0 ×3 · ingress-nginx controller-v1.15.1 · ជួប x509 (kind-trust-ca.sh) + nodeSelector patch |
 | 2 Postgres StatefulSet | ✅ | 2026-09-29 | postgres-0 (worker2), PVC data-postgres-0 Bound 1Gi standard · PVC រស់ក្រោយ delete pod + STS: ✅ (UID ដដែល, data នៅ) |
 | 3 App Deployment + probes | ✅ | 2026-09-30 | error ដែលជួប: ImagePullBackOff 401 → PAT secret · CrashLoop Flyway non-empty schema · UnknownHost postgres · Docker VM 1.9GB OOM → 8GB · លទ្ធផល: 2/2 Ready, start 4.7s, 8 products |
-| 4 Service + Ingress | ⬜ | | |
+| 4 Service + Ingress | 🟡 | | ingress minishop.local → 200, POST 201, LB 11/9 ពីរ pod · hosts file (អ្នក) |
 | 5 Rolling update | ⬜ | | non-200 count: __ / self-heal ដាច់: __s |
 | 6 Kustomize | ⬜ | | |
 | 7 HPA + k6 | ⬜ | | max replicas ដល់: __ |
