@@ -46,7 +46,7 @@ Code នឹងកើតឡើងនៅ Phase A Task 0 ជាគម្រោង S
 
 1. **`docs/reference/tech-stack.md` ឈ្នះជានិច្ច** សម្រាប់ version របស់ tool។ កុំ upgrade major version ណាមួយដោយគ្មាន ADR ថ្មីក្នុង `docs/decisions/`។
 2. ⚠️ **Version drift:** A3 plan កែរួច 2026-09-29 (`postgres:17`, ingress/metrics-server/kind pin)។ `docs/journey/phase-a4/plan.md` នៅមាន `latest` (បន្ទាត់ ~60, ~436) និង `postgres:16` (~121) — កែពេលចាប់ផ្តើម A4។ តម្លៃត្រឹមត្រូវគឺ **Spring Boot 4.1.x / `postgres:17`** តាម tech-stack។
-3. File ដែលឯកសារយោង តែ**មិនទាន់មាន**: ADR 007–009, runbooks `k8s-pod-not-ready.md`, `k8s-rollback.md`, `terraform-*.md`។ បង្កើតនៅពេលដល់ Task របស់វា មិនមែនមុន។ (មានរួច 2026-09-30: ADR 001–006, `runbooks/ci-failure.md`, `scripts/check-env.sh`, `scripts/kind-trust-ca.sh`, `docs/journey/phase-{a,a2,a3}/{plan,worklog,learning-log}.md`, `docs/{README,architecture}.md`, `docs/guides/`, `docs/reference/`។)
+3. File ដែលឯកសារយោង តែ**មិនទាន់មាន**: ADR 008–009, runbooks `k8s-pod-not-ready.md`, `k8s-rollback.md`, `terraform-*.md`។ បង្កើតនៅពេលដល់ Task របស់វា មិនមែនមុន។ (មានរួច 2026-09-30: ADR 001–007, `runbooks/ci-failure.md`, `scripts/check-env.sh`, `scripts/kind-trust-ca.sh`, `docs/journey/phase-{a,a2,a3}/{plan,worklog,learning-log}.md`, `docs/{README,architecture}.md`, `docs/guides/`, `docs/reference/`។)
 
 ---
 

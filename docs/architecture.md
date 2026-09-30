@@ -28,7 +28,7 @@ Version ពេញលេញ: [reference/tech-stack.md](reference/tech-stack.md)�
       ▼
  Ingress minishop  → Service minishop-app (ClusterIP :80)   ns minishop
       ▼                  │ ផ្ញើតែទៅ pod ដែល readiness ✅ (EndpointSlice)
- Deployment minishop-app ×2  (RollingUpdate maxSurge 1 / maxUnavailable 0)
+ Deployment minishop-app ×2  (RollingUpdate maxSurge 1 / maxUnavailable 0)  preStop 10s + graceful (ADR-007)
       │  Pod: image :<sha>, :8080, non-root uid 100, read-only FS + emptyDir /tmp
       │  config ← ConfigMap app-config · password ← Secret postgres-secret · pull ← Secret ghcr-creds
       ▼  jdbc:postgresql://postgres:5432/minishop

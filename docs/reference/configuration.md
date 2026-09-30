@@ -13,6 +13,8 @@ App អាន config ពី env var តែប៉ុណ្ណោះ (`application
 | `SPRING_DATASOURCE_PASSWORD` | ✅ | **គ្មាន** | — | **secret** — មិនដែលក្នុង git |
 | `SPRING_PROFILES_ACTIVE` | | (គ្មាន) | `dev` | `dev` = Flyway បន្ថែម `db/dev` seed (8 products); `it` = test |
 | `JAVA_TOOL_OPTIONS` | | (គ្មាន) | `-XX:MaxRAMPercentage=75.0` | JVM អានស្វ័យប្រវត្តិ; Dockerfile ENTRYPOINT មាន flag ដដែលរួច |
+| `SERVER_SHUTDOWN` | | (Boot default) | `graceful` | K8s: ConfigMap — Tomcat បញ្ចប់ request ដែលកំពុងដើរក្រោយ SIGTERM (ADR-007) |
+| `SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE` | | 30s | `20s` | ≤ `terminationGracePeriodSeconds` − preStop |
 
 Config ថេរក្នុង `application.yml` (មិនមែន env): `ddl-auto: validate`, `open-in-view: false`, actuator expose `health,info,metrics,prometheus`, `health.probes.enabled: true`។
 
@@ -25,6 +27,7 @@ Config ថេរក្នុង `application.yml` (មិនមែន env): `ddl
 | `SPRING_DATASOURCE_PASSWORD` | ដដែល | `.env` → `DB_PASSWORD` | Secret `postgres-secret` key `POSTGRES_PASSWORD` | Testcontainers |
 | `SPRING_PROFILES_ACTIVE` | `export` | `.env` | ConfigMap `app-config` | `it` (ក្នុង test) |
 | `JAVA_TOOL_OPTIONS` | — | — | ConfigMap `app-config` | — |
+| `SERVER_SHUTDOWN`, `SPRING_LIFECYCLE_…` | — | — | ConfigMap `app-config` | — |
 
 ## Docker Compose — `mini-shop/.env` (gitignored; template `.env.example`)
 
