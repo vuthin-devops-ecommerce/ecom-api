@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload unit test report
         if: always()   # ► អ្វី: run step នេះទោះ test ធ្លាក់ — បើគ្មាន report មិនដែល upload ពេលដែលអ្នកត្រូវការវាបំផុត
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: surefire-reports
           path: mini-shop/target/surefire-reports/     # ► path ពី root (action មិនស្គាល់ working-directory)
@@ -137,7 +137,7 @@ jobs:
 
       - name: Upload integration test report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: failsafe-reports                       # ► failsafe សរសេរ report ទៅ target/failsafe-reports/ (មិនមែន surefire-reports)
           path: mini-shop/target/failsafe-reports/
