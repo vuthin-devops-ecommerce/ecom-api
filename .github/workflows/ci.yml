@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # ► អ្វី: clone commit ដែលធ្វើឱ្យ run នេះកើតឡើង ចូល runner (VM ទទេស្អាតរាល់ run)
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin          # ► អ្វី: Eclipse Temurin — vendor ដដែលនឹង laptop (README) និង Dockerfile (eclipse-temurin:21)
           java-version: "21"             # ► អ្វី: ដូច <java.version>21 ក្នុង pom.xml — "Reproducible": Java ដដែលគ្រប់ទីកន្លែង
@@ -116,7 +116,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # ► សេណារីយ៉ូ: job នីមួយៗ = VM ថ្មី → ត្រូវ checkout ម្តងទៀត (តម្លៃនៃការបំបែក job ~5s)
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: "21"
