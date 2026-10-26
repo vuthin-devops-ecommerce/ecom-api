@@ -167,7 +167,7 @@ jobs:
         # ► អ្វី: BuildKit builder (driver docker-container) — ត្រូវការសម្រាប់ cache type=gha ខាងក្រោម
         # ► សេណារីយ៉ូ: បើគ្មាន → build-push-action ប្រើ docker driver ធម្មតា → "cache export is not supported for the docker driver"
 
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}              # ► អ្នកដែល trigger run (username GitHub)
